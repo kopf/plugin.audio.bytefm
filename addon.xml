@@ -4,8 +4,9 @@
         <import addon="xbmc.python" version="2.20.0" />
         <import addon="script.module.beautifulsoup4" version="4.3.2"/>
         <import addon="script.module.requests" version="2.9.1"/>
+        <import addon="script.common.plugin.cache" version="2.5.5"/>
     </requires>
-    <extension point="xbmc.python.pluginsource" library="bytefm.py">
+    <extension point="xbmc.python.pluginsource" library="main.py">
         <provides>audio</provides>
     </extension>
     <extension point="xbmc.addon.metadata">

@@ -8,6 +8,8 @@ import xbmcaddon
 import xbmcgui
 import xbmcplugin
 
+from bytefm import Scraper
+
 
 class ByteFMPlugin(object):
     def __init__(self, base_url, addon_handle, args):
@@ -16,10 +18,10 @@ class ByteFMPlugin(object):
         self.addon = xbmcaddon.Addon(self.plugin_name)
         self.cache_path = self.addon.getAddonInfo('path').decode('utf-8')
         self.addon_handle = addon_handle
+        self.scraper = Scraper()
         self.cmd = args.get('cmd')
         self.selected = args.get('selected')
-        with open('/tmp/bla.txt', 'w') as f:
-            f.write(str(args))
+        self.route = args.get('route')
 
     def execute(self):
         if not self.cmd:
@@ -39,21 +41,14 @@ class ByteFMPlugin(object):
                 entries.append({'cmd': 'list_shows', 'label': l, 'selected': l, 'is_folder': True})
             self.display_screen(entries)
         else:
-            soup = self._make_soup('https://www.byte.fm/sendungen/{}/'.format(self.selected.lower()))
-            entries = []
-            for broadcast_list in soup.find_all('div', {'class': 'broadcast-list'}):
-                for show in broadcast_list.find_all('a'):
-                    name = unicode(show.text.strip()).encode('utf-8')
-                    url = show['href']
-                    entries.append({'cmd': 'list_broadcasts', 'label': name, 'selected': name, 'url': url, 'is_folder': True})
+            shows = self.scraper.list_shows('/sendungen/{}/'.format(self.selected.lower()))
+            entries = [
+                {'cmd': 'list_broadcasts', 'label': name, 'selected': name, 'route': route, 'is_folder': True} for name, route in shows
+            ]
             self.display_screen(entries)
 
-
-    def get_shows(self):
+    def list_broadcasts(self):
         raise NotImplementedError()
-    def get_broadcasts(self):
-        raise NotImplementedError()
-
 
     def display_screen(self, entries):
         xbmc_entries = []

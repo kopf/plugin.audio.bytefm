@@ -9,6 +9,8 @@ import xbmcgui
 import xbmcplugin
 
 from bytefm import Scraper
+from lib import log
+
 
 
 class ByteFMPlugin(object):
@@ -31,6 +33,8 @@ class ByteFMPlugin(object):
             ])
         elif self.cmd == 'list_shows':
             self.list_shows()
+        elif self.cmd == 'list_broadcasts':
+            self.list_broadcasts()
         else:
             raise NotImplementedError()
 
@@ -48,15 +52,23 @@ class ByteFMPlugin(object):
             self.display_screen(entries)
 
     def list_broadcasts(self):
-        raise NotImplementedError()
+        # TODO: Pagination
+        broadcasts = self.scraper.list_broadcasts(self.route)
+        entries = [
+            {'cmd': 'play_broadcast', 'label': u'{} ({})'.format(broadcast['title'], broadcast['date']),
+             'route': broadcast['route'], 'label2': broadcast['description'], 'thumbnailImage': broadcast['img']} for broadcast in broadcasts
+        ]
+        self.display_screen(entries)
 
     def display_screen(self, entries):
         xbmc_entries = []
         for entry in entries:
             label = entry.pop('label')
+            label2 = entry.pop('label2', None)
+            thumbnail = entry.pop('thumbnailImage', None)
             is_folder = entry.pop('is_folder', False)
             url = self._build_url(entry)
-            xbmc_entries.append((url, xbmcgui.ListItem(label=label), is_folder))
+            xbmc_entries.append((url, xbmcgui.ListItem(label=label, label2=label2, thumbnailImage=thumbnail), is_folder))
         xbmcplugin.addDirectoryItems(self.addon_handle, xbmc_entries, len(xbmc_entries))
         xbmcplugin.setContent(self.addon_handle, 'songs')
         xbmcplugin.endOfDirectory(self.addon_handle)

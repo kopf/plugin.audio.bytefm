@@ -1,87 +1,115 @@
-import sys
-import urllib
-import urlparse
-
-from bs4 import BeautifulSoup
 import requests
-import xbmcaddon
-import xbmcgui
-import xbmcplugin
 
-from bytefm import Scraper
-from lib import log
+from simpleplugin import Plugin
 
 
+plugin = Plugin()
 
-class ByteFMPlugin(object):
-    def __init__(self, base_url, addon_handle, args):
-        self.base_url = base_url
-        self.plugin_name = 'plugin.audio.bytefm'
-        self.addon = xbmcaddon.Addon(self.plugin_name)
-        self.cache_path = self.addon.getAddonInfo('path').decode('utf-8')
-        self.addon_handle = addon_handle
-        self.scraper = Scraper()
-        self.cmd = args.get('cmd')
-        self.selected = args.get('selected')
-        self.route = args.get('route')
+BASE_URL = 'http://localhost:8000'
 
-    def execute(self):
-        if not self.cmd:
-            self.display_screen([
-                {'cmd': 'play', 'url': 'http://byte.fm/livestream.mp3', 'label': 'Livestream'},
-                {'cmd': 'list_shows', 'label': 'Programmes', 'is_folder': True},
-            ])
-        elif self.cmd == 'list_shows':
-            self.list_shows()
-        elif self.cmd == 'list_broadcasts':
-            self.list_broadcasts()
-        else:
-            raise NotImplementedError()
+LIVE_BASE_URL = 'https://byte.fm'
 
-    def list_shows(self):
-        if not self.selected:
-            entries = []
-            for l in '0ABCDEFGHIJKLMNOPQRSTUVWXYZ':
-                entries.append({'cmd': 'list_shows', 'label': l, 'selected': l, 'is_folder': True})
-            self.display_screen(entries)
-        else:
-            shows = self.scraper.list_shows('/sendungen/{}/'.format(self.selected.lower()))
-            entries = [
-                {'cmd': 'list_broadcasts', 'label': name, 'selected': name, 'route': route, 'is_folder': True} for name, route in shows
-            ]
-            self.display_screen(entries)
+LETTERS = '0ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
-    def list_broadcasts(self):
-        # TODO: Pagination
-        broadcasts = self.scraper.list_broadcasts(self.route)
-        entries = [
-            {'cmd': 'play_broadcast', 'label': u'{} ({})'.format(broadcast['title'], broadcast['date']),
-             'route': broadcast['route'], 'label2': broadcast['description'], 'thumbnailImage': broadcast['img']} for broadcast in broadcasts
-        ]
-        self.display_screen(entries)
 
-    def display_screen(self, entries):
-        xbmc_entries = []
-        for entry in entries:
-            label = entry.pop('label')
-            label2 = entry.pop('label2', None)
-            thumbnail = entry.pop('thumbnailImage', None)
-            is_folder = entry.pop('is_folder', False)
-            url = self._build_url(entry)
-            xbmc_entries.append((url, xbmcgui.ListItem(label=label, label2=label2, thumbnailImage=thumbnail), is_folder))
-        xbmcplugin.addDirectoryItems(self.addon_handle, xbmc_entries, len(xbmc_entries))
-        xbmcplugin.setContent(self.addon_handle, 'songs')
-        xbmcplugin.endOfDirectory(self.addon_handle)
+@plugin.cached(duration=60*24*7)
+def _get_genres():
+    return requests.get(BASE_URL + '/api/v1/genres/').json()
 
-    def _build_url(self, query):
-        return u'{}?{}'.format(self.base_url, urllib.urlencode(query))
+@plugin.cached()
+def _get_shows():
+    return requests.get(BASE_URL + '/api/v1/broadcasts/').json()
 
-    def _make_soup(self, url):
-        return BeautifulSoup(requests.get(url).text, 'html.parser')
+@plugin.cached()
+def _get_broadcasts(slug):
+    return requests.get(BASE_URL + '/api/v1/broadcasts/{}/'.format(slug)).json()
+
+def _get_img_url(api_resp):
+    if api_resp['image']:
+        return LIVE_BASE_URL + api_resp['image']
+    return None
+
+def _get_subtitle(broadcast):
+    if broadcast.get('subtitle'):
+        return u'{} ({})'.format(broadcast['subtitle'], broadcast['date'])
+    else:
+        return u'Broadcast from {}'.format(broadcast['date'])
+
+
+@plugin.action()
+def root(params):
+    items = [
+        {
+            'label': 'Listen live',
+            'url': 'http://byte.fm/livestream.mp3',
+            'is_playable': True
+        },
+        {
+            'label': 'Browse by title',
+            'url': plugin.get_url(action='letters'),
+        },
+        {
+            'label': 'Browse by genre',
+            'url': plugin.get_url(action='list_genres'),
+        }
+    ]
+    return items
+
+
+@plugin.action()
+def letters(params):
+    return [{'label': letter, 'url': plugin.get_url(action='list_shows', letter=letter)} for letter in LETTERS]
+
+
+@plugin.action()
+def list_genres(params):
+    return [
+        {
+            'label': genre,
+            'url': plugin.get_url(action='list_shows', genre=genre)
+        } for genre in _get_genres()
+    ]
+
+
+@plugin.action()
+def list_shows(params):
+    items = []
+    if params.get('letter'):
+        for show in _get_shows():
+            if show['title'].lower().startswith(params['letter'].lower()):
+                items.append({
+                    'label': show['title'],
+                    'url': plugin.get_url(action='list_broadcasts', slug=show['slug']),
+                    'thumbnail': _get_img_url(show),
+                    'icon': _get_img_url(show)
+                })
+    elif params.get('genre'):
+        for show in _get_shows():
+            if params['genre'] in show['genres']:
+                items.append({
+                    'label': show['title'],
+                    'url': plugin.get_url(action='list_broadcasts', slug=show['slug']),
+                    'thumbnail': _get_img_url(show),
+                    'icon': _get_img_url(show)
+                })
+    else:
+        raise Exception("Need to specify at least a letter or genre!")
+    return items
+
+
+@plugin.action()
+def list_broadcasts(params):
+    # TODO: url: play or display info?
+    # TODO: remove html from api resp
+    return [
+        {
+            'label': _get_subtitle(broadcast),
+            'url': plugin.get_url(action='root'),
+            'icon': _get_img_url(broadcast),
+            'thumbnail': _get_img_url(broadcast),
+        } for broadcast in _get_broadcasts(params['slug'])
+    ]
 
 
 if __name__ == '__main__':
-    plugin = ByteFMPlugin(
-        base_url=sys.argv[0], addon_handle=int(sys.argv[1]),
-        args={k: v[0] for k, v in urlparse.parse_qs(sys.argv[2][1:]).iteritems()})
-    plugin.execute()
+    plugin.run()

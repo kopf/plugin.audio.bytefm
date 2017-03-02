@@ -1,3 +1,5 @@
+import os
+
 import requests
 
 from simpleplugin import Plugin
@@ -11,18 +13,32 @@ LIVE_BASE_URL = 'https://byte.fm'
 
 LETTERS = '0ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
+PLUGIN_NAME = 'plugin.audio.bytefm'
+
+AUTH = ('lol', 'lol')
+
+
+def _http_get(url, auth=None):
+    """Log and perform a HTTP GET"""
+    plugin.log_notice("HTTP GET: {}".format(url))
+    return requests.get(url, auth=auth)
 
 @plugin.cached(duration=60*24*7)
 def _get_genres():
-    return requests.get(BASE_URL + '/api/v1/genres/').json()
+    return _http_get(BASE_URL + '/api/v1/genres/').json()
 
 @plugin.cached()
 def _get_shows():
-    return requests.get(BASE_URL + '/api/v1/broadcasts/').json()
+    return _http_get(BASE_URL + '/api/v1/broadcasts/').json()
 
 @plugin.cached()
 def _get_broadcasts(slug):
-    return requests.get(BASE_URL + '/api/v1/broadcasts/{}/'.format(slug)).json()
+    return _http_get(BASE_URL + '/api/v1/broadcasts/{}/'.format(slug)).json()
+
+@plugin.cached(duration=60*24*7)
+def _get_broadcast_url_playlist(show_slug, broadcast_date):
+    url = BASE_URL + '/api/v1/broadcasts/{}/{}/'.format(show_slug, broadcast_date)
+    return _http_get(url, auth=AUTH).json()
 
 def _get_img_url(api_resp):
     if api_resp['image']:
@@ -106,11 +122,30 @@ def list_broadcasts(params):
     return [
         {
             'label': _get_subtitle(broadcast),
-            'url': plugin.get_url(action='root'),
+            'url': plugin.get_url(action='play', show_slug=params['slug'], broadcast_date=broadcast['date']),
             'icon': _get_img_url(broadcast) or params['show_img'],
             'thumbnail': _get_img_url(broadcast) or params['show_img'],
+            'info': {'video': {'plot': broadcast['description']}},
+            'is_playable': True
         } for broadcast in _get_broadcasts(params['slug'])
     ]
+
+
+@plugin.action()
+def play(params):
+    broadcast_data = _get_broadcast_url_playlist(params['show_slug'], params['broadcast_date'])
+    url = broadcast_data['url']
+    playlist = broadcast_data['playlist']
+    mp3_filename = url.replace('/', '_').replace(' ', '_')
+    mp3_path = os.path.join(plugin.config_dir, mp3_filename)
+    resp = requests.get('http://archiv.byte.fm' + url, stream=True, auth=AUTH)
+    # TODO: Assert http 200
+    if not os.path.isfile(mp3_path):
+        with open(mp3_path, 'wb') as f:
+            for block in resp.iter_content(4096):
+                f.write(block)
+    return 'special://profile/addon_data/{}/{}'.format(PLUGIN_NAME, mp3_filename)
+
 
 
 if __name__ == '__main__':

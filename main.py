@@ -77,18 +77,20 @@ def list_shows(params):
     if params.get('letter'):
         for show in _get_shows():
             if show['title'].lower().startswith(params['letter'].lower()):
+                show_img = _get_img_url(show)
                 items.append({
                     'label': show['title'],
-                    'url': plugin.get_url(action='list_broadcasts', slug=show['slug']),
+                    'url': plugin.get_url(action='list_broadcasts', slug=show['slug'], show_img=show_img),
                     'thumbnail': _get_img_url(show),
                     'icon': _get_img_url(show)
                 })
     elif params.get('genre'):
         for show in _get_shows():
             if params['genre'] in show['genres']:
+                show_img = _get_img_url(show)
                 items.append({
                     'label': show['title'],
-                    'url': plugin.get_url(action='list_broadcasts', slug=show['slug']),
+                    'url': plugin.get_url(action='list_broadcasts', slug=show['slug'], show_img=show_img),
                     'thumbnail': _get_img_url(show),
                     'icon': _get_img_url(show)
                 })
@@ -105,8 +107,8 @@ def list_broadcasts(params):
         {
             'label': _get_subtitle(broadcast),
             'url': plugin.get_url(action='root'),
-            'icon': _get_img_url(broadcast),
-            'thumbnail': _get_img_url(broadcast),
+            'icon': _get_img_url(broadcast) or params['show_img'],
+            'thumbnail': _get_img_url(broadcast) or params['show_img'],
         } for broadcast in _get_broadcasts(params['slug'])
     ]
 

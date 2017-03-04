@@ -10,6 +10,8 @@ BASE_URL = 'http://localhost:8000'
 
 LIVE_BASE_URL = 'https://byte.fm'
 
+ARCHIVE_BASE_URL = 'http://archiv.byte.fm'
+
 LETTERS = '0ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 PLUGIN_NAME = 'plugin.audio.bytefm'
@@ -202,7 +204,7 @@ def play(params):
     mp3_filename = url.replace('/', '_').replace(' ', '_')
     mp3_path = os.path.join(plugin.config_dir, mp3_filename)
     cue_path = mp3_path + '.cue'
-    resp = requests.get('http://archiv.byte.fm' + url, stream=True, auth=AUTH)
+    resp = requests.get(ARCHIVE_BASE_URL + url, stream=True, auth=AUTH)
     # TODO: Assert http 200
     if not os.path.isfile(mp3_path):
         plugin.log_error('{} does not exist'.format(mp3_path))

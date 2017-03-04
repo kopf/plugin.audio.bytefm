@@ -51,6 +51,11 @@ def _get_broadcast_url_playlist(show_slug, broadcast_date):
     url = BASE_URL + '/api/v1/broadcasts/{}/{}/'.format(show_slug, broadcast_date)
     return _http_get(url, auth=AUTH).json()
 
+@plugin.cached(duration=60*24*30) # TODO: RESET THIS CACHE WHEN USER CHANGES CREDENTIALS
+def _get_streams():
+    url = BASE_URL + '/api/v1/streams/'
+    return _http_get(url, auth=AUTH).json()
+
 def _get_img_url(api_resp):
     if api_resp['image']:
         return LIVE_BASE_URL + api_resp['image']
@@ -76,10 +81,12 @@ def _save_cuefile(playlist, cue_path, mp3_path, moderators, broadcast_title):
 
 @plugin.action()
 def root(params):
+    streams = _get_streams()
+    stream_url = streams.get('hq', streams['sq'])
     items = [
         {
             'label': 'Listen live',
-            'url': 'http://byte.fm/livestream.mp3',
+            'url': stream_url,
             'icon': os.path.join(THIS_DIR, 'icon.png'),
             'is_playable': True
         },

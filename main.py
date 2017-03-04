@@ -97,15 +97,15 @@ def root(params):
             'is_playable': True
         },
         {
-            'label': 'Browse by title',
+            'label': 'Browse shows by title',
             'url': plugin.get_url(action='letters'),
         },
         {
-            'label': 'Browse by genre',
+            'label': 'Browse shows by genre',
             'url': plugin.get_url(action='list_genres'),
         },
         {
-            'label': 'Browse by moderator',
+            'label': 'Browse shows by moderator',
             'url': plugin.get_url(action='list_moderators'),
         }
     ]
@@ -212,7 +212,6 @@ def play(params):
     if not os.path.isfile(cue_path):
         _save_cuefile(playlist, cue_path, mp3_path, params['moderators'], params['title'])
     return 'special://profile/addon_data/{}/{}'.format(PLUGIN_NAME, mp3_filename + '.cue')
-
 
 
 if __name__ == '__main__':

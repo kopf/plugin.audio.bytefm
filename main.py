@@ -34,10 +34,12 @@ CUE_ENTRY_TEMPLATE = u'''FILE "{filename}" MP3
 '''
 
 
-def _http_get(url, auth=None):
+def _http_get(url, **kwargs):
     """Log and perform a HTTP GET"""
     plugin.log_notice("HTTP GET: {}".format(url))
-    return requests.get(url, auth=auth)
+    resp = requests.get(url, **kwargs)
+    resp.raise_for_status()
+    return resp
 
 @plugin.cached(duration=60*24*7)
 def _get_genres():
@@ -86,7 +88,7 @@ def _save_cuefile(playlist, cue_path, mp3_path, moderators, broadcast_title):
             minutes, seconds = divmod(entry['time'], 60)
             timestamp = "%02d:%02d:00" % (minutes, seconds)
             f.write(CUE_ENTRY_TEMPLATE.format(
-                filename=mp3_path, tracknumber='%02d' % idx, title=entry['title'],
+                filename=mp3_path, tracknumber='%02d' % int(idx+1), title=entry['title'],
                 artist=entry['artist'], timestamp=timestamp).encode('utf-8'))
 
 
@@ -95,6 +97,7 @@ def root(params):
     streams = _get_streams()
     stream_url = streams.get('hq', streams['sq'])
     items = [
+        #{'label': 'lolza', 'url': plugin.get_url(action='lolza')},
         {
             'label': 'Listen live',
             'url': stream_url,
@@ -210,11 +213,9 @@ def play(params):
     mp3_filename = url.replace('/', '_').replace(' ', '_').lower()
     mp3_path = os.path.join(plugin.config_dir, mp3_filename)
     cue_path = mp3_path + '.cue'
-
     if not os.path.isfile(mp3_path):
         plugin.log_notice('{} does not exist, downloading...'.format(mp3_path))
-        resp = requests.get(ARCHIVE_BASE_URL + url, stream=True, auth=AUTH)
-        # TODO: Assert http 200
+        resp = _http_get(ARCHIVE_BASE_URL + url, stream=True, auth=AUTH)
         progress_bar = xbmcgui.DialogProgress()
         progress_bar.create('Downloading...')
         i = 0.0

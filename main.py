@@ -56,6 +56,12 @@ def _get_streams():
     url = BASE_URL + '/api/v1/streams/'
     return _http_get(url, auth=AUTH).json()
 
+@plugin.cached(duration=60*24*7)
+def _get_moderators():
+    url = BASE_URL + '/api/v1/moderators/'
+    moderators = _http_get(url).json()
+    return sorted(moderators, key=lambda k: k['name'])
+
 def _get_img_url(api_resp):
     if api_resp['image']:
         return LIVE_BASE_URL + api_resp['image']
@@ -97,6 +103,10 @@ def root(params):
         {
             'label': 'Browse by genre',
             'url': plugin.get_url(action='list_genres'),
+        },
+        {
+            'label': 'Browse by moderator',
+            'url': plugin.get_url(action='list_moderators'),
         }
     ]
     return items
@@ -118,34 +128,51 @@ def list_genres(params):
 
 
 @plugin.action()
+def list_moderators(params):
+    return [
+        {
+            'label': moderator['name'],
+            'icon': LIVE_BASE_URL + moderator['image'] if moderator['image'] else '',
+            'info': {'video': {'plot': moderator['description']}},
+            'url': plugin.get_url(action='list_shows', moderator_slug=moderator['slug'])
+        } for moderator in _get_moderators()
+    ]
+
+
+@plugin.action()
 def list_shows(params):
     items = []
+    shows = _get_shows()
+
+    def _create_show_listitem(show):
+        show_img = _get_img_url(show)
+        return {
+            'label': show['title'],
+            'url': plugin.get_url(
+                action='list_broadcasts', slug=show['slug'], show_img=show_img,
+                moderators=show['moderators'], show_title=show['title']),
+            'thumbnail': _get_img_url(show),
+            'icon': _get_img_url(show)
+        }
+
     if params.get('letter'):
-        for show in _get_shows():
+        for show in shows:
             if show['title'].lower().startswith(params['letter'].lower()):
-                show_img = _get_img_url(show)
-                items.append({
-                    'label': show['title'],
-                    'url': plugin.get_url(
-                        action='list_broadcasts', slug=show['slug'], show_img=show_img,
-                        moderators=show['moderators'], show_title=show['title']),
-                    'thumbnail': _get_img_url(show),
-                    'icon': _get_img_url(show)
-                })
+                items.append(_create_show_listitem(show))
     elif params.get('genre'):
-        for show in _get_shows():
+        for show in shows:
             if params['genre'] in show['genres']:
-                show_img = _get_img_url(show)
-                items.append({
-                    'label': show['title'],
-                    'url': plugin.get_url(
-                        action='list_broadcasts', slug=show['slug'], show_img=show_img,
-                        moderators=show['moderators'], show_title=show['title']),
-                    'thumbnail': _get_img_url(show),
-                    'icon': _get_img_url(show)
-                })
+                items.append(_create_show_listitem(show))
+    elif params.get('moderator_slug'):
+        try:
+            moderator = [m for m in _get_moderators() if m['slug'] == params['moderator_slug']][0]
+        except IndexError:
+            raise Exception("Invalid moderator {} - not found!".format(params['moderator_slug']))
+        for show in shows:
+            if show['slug'] in moderator['broadcasts']:
+                items.append(_create_show_listitem(show))
     else:
-        raise Exception("Need to specify at least a letter or genre!")
+        raise Exception("Need to specify at least a letter, genre or moderator slug!")
     return items
 
 

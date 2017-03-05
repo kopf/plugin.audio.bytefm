@@ -54,7 +54,7 @@ def _get_broadcasts(slug):
     return _http_get(BASE_URL + '/api/v1/broadcasts/{}/'.format(slug)).json()
 
 @plugin.cached(duration=60*24*7)
-def _get_broadcast_url_playlist(show_slug, broadcast_date):
+def _get_broadcast_recording_playlist(show_slug, broadcast_date):
     url = BASE_URL + '/api/v1/broadcasts/{}/{}/'.format(show_slug, broadcast_date)
     return _http_get(url, auth=AUTH).json()
 
@@ -80,12 +80,18 @@ def _get_subtitle(broadcast):
     else:
         return u'Broadcast from {}'.format(broadcast['date'])
 
-def _save_cuefile(playlist, cue_path, mp3_path, moderators, broadcast_title):
+def _save_cuefile(playlist, cue_path, mp3_paths, moderators, broadcast_title):
     with open(cue_path, 'w') as f:
         f.write(CUE_TEMPLATE.format(
             moderators=moderators, broadcast_title=broadcast_title).encode('utf-8'))
         for idx, entry in enumerate(playlist):
-            minutes, seconds = divmod(entry['time'], 60)
+            if entry['time'] > 3600:
+                timepoint = entry['time'] - 3600
+                mp3_path = mp3_paths[1]
+            else:
+                timepoint = entry['time']
+                mp3_path = mp3_paths[0]
+            minutes, seconds = divmod(timepoint, 60)
             timestamp = "%02d:%02d:00" % (minutes, seconds)
             f.write(CUE_ENTRY_TEMPLATE.format(
                 filename=mp3_path, tracknumber='%02d' % int(idx+1), title=entry['title'],
@@ -97,7 +103,6 @@ def root(params):
     streams = _get_streams()
     stream_url = streams.get('hq', streams['sq'])
     items = [
-        #{'label': 'lolza', 'url': plugin.get_url(action='lolza')},
         {
             'label': 'Listen live',
             'url': stream_url,
@@ -207,27 +212,32 @@ def list_broadcasts(params):
 
 @plugin.action()
 def play(params):
-    broadcast_data = _get_broadcast_url_playlist(params['show_slug'], params['broadcast_date'])
-    url = broadcast_data['url']
+    # TODO: TEST CUESHEETS WITH MULTIPLE PARTS
+    broadcast_data = _get_broadcast_recording_playlist(params['show_slug'], params['broadcast_date'])
     playlist = reversed(broadcast_data['playlist'])
-    mp3_filename = url.replace('/', '_').replace(' ', '_').lower()
-    mp3_path = os.path.join(plugin.config_dir, mp3_filename)
-    cue_path = mp3_path + '.cue'
-    if not os.path.isfile(mp3_path):
-        plugin.log_notice('{} does not exist, downloading...'.format(mp3_path))
-        resp = _http_get(ARCHIVE_BASE_URL + url, stream=True, auth=AUTH)
-        progress_bar = xbmcgui.DialogProgress()
-        progress_bar.create('Downloading...')
-        i = 0.0
-        file_size = int(resp.headers['Content-Length'])
-        with open(mp3_path, 'wb') as f:
-            for block in resp.iter_content(CHUNK_SIZE):
-                f.write(block)
-                i += 1
-                percent_done = int(((CHUNK_SIZE * i) / file_size) * 100)
-                progress_bar.update(percent_done, 'Please wait', '')
+    recordings = broadcast_data['recording']
+    mp3_paths = []
+    for rec_idx, url in enumerate(recordings):
+        mp3_filename = url.replace('/', '_').replace(' ', '_').lower()
+        mp3_path = os.path.join(plugin.config_dir, mp3_filename)
+        mp3_paths.append(mp3_path)
+        cue_path = mp3_path + '.cue'
+        if not os.path.isfile(mp3_path):
+            plugin.log_notice('{} does not exist, downloading...'.format(mp3_path))
+            resp = _http_get(ARCHIVE_BASE_URL + url, stream=True, auth=AUTH)
+            progress_bar = xbmcgui.DialogProgress()
+            progress_bar.create('Downloading...')
+            i = 0.0
+            file_size = int(resp.headers['Content-Length'])
+            with open(mp3_path, 'wb') as f:
+                for block in resp.iter_content(CHUNK_SIZE):
+                    f.write(block)
+                    i += 1
+                    percent_done = int(((CHUNK_SIZE * i) / file_size) * 100)
+                    progress_bar.update(percent_done, 'Please wait',
+                                        'File {} of {}'.format(rec_idx+1, len(recordings)))
     if not os.path.isfile(cue_path):
-        _save_cuefile(playlist, cue_path, mp3_path, params['moderators'], params['title'])
+        _save_cuefile(playlist, cue_path, mp3_paths, params['moderators'], params['title'])
     return 'special://profile/addon_data/{}/{}'.format(PLUGIN_NAME, mp3_filename + '.cue')
 
 

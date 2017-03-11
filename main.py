@@ -2,6 +2,7 @@ import hashlib
 import os
 import shutil
 
+from BeautifulSoup import BeautifulSoup
 import requests
 from simpleplugin import Plugin
 import xbmcgui
@@ -44,6 +45,10 @@ def _http_get(url, **kwargs):
     resp.raise_for_status()
     return resp
 
+def _strip_html(text):
+    text = text or ''
+    return BeautifulSoup(text).getText()
+
 @plugin.cached(duration=60*24*7)
 def _get_genres():
     return _http_get(BASE_URL + '/api/v1/genres/').json()
@@ -79,7 +84,7 @@ def _get_img_url(api_resp):
 
 def _get_subtitle(broadcast):
     if broadcast.get('subtitle'):
-        return u'{} ({})'.format(broadcast['subtitle'], broadcast['date'])
+        return u'{} ({})'.format(_strip_html(broadcast['subtitle']), broadcast['date'])
     else:
         return _(u'Broadcast from {}').format(broadcast['date'])
 
@@ -191,9 +196,9 @@ def list_genres(params):
 def list_moderators(params):
     return [
         {
-            'label': moderator['name'],
+            'label': _strip_html(moderator['name']),
             'icon': LIVE_BASE_URL + moderator['image'] if moderator['image'] else '',
-            'info': {'video': {'plot': moderator['description']}},
+            'info': {'video': {'plot': _strip_html(moderator['description'])}},
             'url': plugin.get_url(action='list_shows', moderator_slug=moderator['slug'])
         } for moderator in _get_moderators()
     ]
@@ -207,12 +212,13 @@ def list_shows(params):
     def _create_show_listitem(show):
         show_img = _get_img_url(show)
         return {
-            'label': show['title'],
+            'label': _strip_html(show['title']),
             'url': plugin.get_url(
                 action='list_broadcasts', slug=show['slug'], show_img=show_img,
                 moderators=show['moderators'] or 'Unknown', show_title=show['title']),
             'thumbnail': _get_img_url(show),
-            'icon': _get_img_url(show)
+            'icon': _get_img_url(show),
+            'info': {'video': {'plot': _strip_html(show['description'])}}
         }
 
     if params.get('letter'):
@@ -242,7 +248,6 @@ def list_shows(params):
 @plugin.action()
 def list_broadcasts(params):
     # TODO: url: play or display info?
-    # TODO: remove html from api resp
     return [
         {
             'label': _get_subtitle(broadcast),

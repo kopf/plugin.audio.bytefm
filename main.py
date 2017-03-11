@@ -8,6 +8,7 @@ import xbmcgui
 
 
 plugin = Plugin()
+_ = plugin.initialize_gettext()
 
 BASE_URL = 'http://localhost:8000'
 
@@ -80,7 +81,7 @@ def _get_subtitle(broadcast):
     if broadcast.get('subtitle'):
         return u'{} ({})'.format(broadcast['subtitle'], broadcast['date'])
     else:
-        return u'Broadcast from {}'.format(broadcast['date'])
+        return _(u'Broadcast from {}').format(broadcast['date'])
 
 def _save_cuefile(playlist, cue_path, mp3_paths, moderators, broadcast_title):
     plugin.log_notice("Creating CUE file at {}".format(cue_path))
@@ -128,16 +129,16 @@ def _download_show(title, moderators, show_slug, broadcast_date, image_url, show
             plugin.log_notice('{} does not exist, downloading...'.format(mp3_path))
             resp = _http_get(ARCHIVE_BASE_URL + url, stream=True, auth=AUTH)
             progress_bar = xbmcgui.DialogProgress()
-            progress_bar.create('Downloading...')
+            progress_bar.create(_('Downloading...'))
             i = 0.0
             file_size = int(resp.headers['Content-Length'])
-            extra_info = 'File {} of {}'.format(rec_idx + 1, len(recordings))
+            extra_info = _('File {} of {}').format(rec_idx + 1, len(recordings))
             with open(mp3_path, 'wb') as f:
                 for block in resp.iter_content(CHUNK_SIZE):
                     f.write(block)
                     i += 1
                     percent_done = int(((CHUNK_SIZE * i) / file_size) * 100)
-                    progress_bar.update(percent_done, 'Please wait', extra_info)
+                    progress_bar.update(percent_done, _('Please wait'), extra_info)
 
     # TODO: Move these calls back to the "play' action? no need for mp3_paths?
     _save_cuefile(playlist, cue_path, mp3_paths, moderators, title)
@@ -150,21 +151,21 @@ def root(params):
     stream_url = streams.get('hq', streams['sq'])
     items = [
         {
-            'label': 'Listen live',
+            'label': _('Livestream'),
             'url': stream_url,
             'icon': os.path.join(THIS_DIR, 'icon.png'),
             'is_playable': True
         },
         {
-            'label': 'Browse shows by title',
+            'label': _('Browse shows by title'),
             'url': plugin.get_url(action='letters'),
         },
         {
-            'label': 'Browse shows by genre',
+            'label': _('Browse shows by genre'),
             'url': plugin.get_url(action='list_genres'),
         },
         {
-            'label': 'Browse shows by moderator',
+            'label': _('Browse shows by moderator'),
             'url': plugin.get_url(action='list_moderators'),
         }
     ]

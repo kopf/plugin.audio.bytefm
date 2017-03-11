@@ -14,34 +14,34 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Poedit-SearchPath-0: main.py\n"
 
-#: main.py:84
+msgctxt "#32000"
 msgid "Broadcast from {}"
 msgstr ""
 
-#: main.py:132
+msgctxt "#32001"
 msgid "Downloading..."
 msgstr ""
 
-#: main.py:135
+msgctxt "#32002"
 msgid "File {} of {}"
 msgstr ""
 
-#: main.py:141
+msgctxt "#32003"
 msgid "Please wait"
 msgstr ""
 
-#: main.py:154
+msgctxt "#32004"
 msgid "Livestream"
 msgstr ""
 
-#: main.py:160
+msgctxt "#32005"
 msgid "Browse shows by title"
 msgstr ""
 
-#: main.py:164
+msgctxt "#32006"
 msgid "Browse shows by genre"
 msgstr ""
 
-#: main.py:168
+msgctxt "#32007"
 msgid "Browse shows by moderator"
 msgstr ""

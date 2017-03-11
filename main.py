@@ -1,4 +1,6 @@
+import hashlib
 import os
+import shutil
 
 import requests
 from simpleplugin import Plugin
@@ -81,6 +83,7 @@ def _get_subtitle(broadcast):
         return u'Broadcast from {}'.format(broadcast['date'])
 
 def _save_cuefile(playlist, cue_path, mp3_paths, moderators, broadcast_title):
+    plugin.log_notice("Creating CUE file at {}".format(cue_path))
     with open(cue_path, 'w') as f:
         f.write(CUE_TEMPLATE.format(
             moderators=moderators, broadcast_title=broadcast_title).encode('utf-8'))
@@ -96,6 +99,49 @@ def _save_cuefile(playlist, cue_path, mp3_paths, moderators, broadcast_title):
             f.write(CUE_ENTRY_TEMPLATE.format(
                 filename=mp3_path, tracknumber='%02d' % int(idx+1), title=entry['title'],
                 artist=entry['artist'], timestamp=timestamp).encode('utf-8'))
+
+def _save_thumbnail(image_url, show_path):
+    try:
+        r = _http_get(image_url, stream=True)
+    except:
+        msg = "Failed to download show thumbnail {} - ignoring.".format(image_url)
+        plugin.log_error(msg)
+    else:
+        with open(os.path.join(show_path, 'folder.jpg'), 'wb') as f:
+            r.raw.decode_content = True
+            shutil.copyfileobj(r.raw, f)
+
+def _download_show(title, moderators, show_slug, broadcast_date, image_url, show_path):
+    plugin.log_notice("Downloading show {} to {}".format(show_slug, show_path))
+    broadcast_data = _get_broadcast_recording_playlist(show_slug, broadcast_date)
+    playlist = reversed(broadcast_data['playlist'])
+    recordings = broadcast_data['recording']
+    mp3_paths = []
+    for rec_idx, url in enumerate(recordings):
+        mp3_filename = url.replace('/', '_').replace(' ', '_').lower()
+        if not os.path.exists(show_path):
+            os.makedirs(show_path)
+        mp3_path = os.path.join(show_path, mp3_filename)
+        mp3_paths.append(mp3_path)
+        cue_path = mp3_path + '.cue'
+        if not os.path.isfile(mp3_path):
+            plugin.log_notice('{} does not exist, downloading...'.format(mp3_path))
+            resp = _http_get(ARCHIVE_BASE_URL + url, stream=True, auth=AUTH)
+            progress_bar = xbmcgui.DialogProgress()
+            progress_bar.create('Downloading...')
+            i = 0.0
+            file_size = int(resp.headers['Content-Length'])
+            extra_info = 'File {} of {}'.format(rec_idx + 1, len(recordings))
+            with open(mp3_path, 'wb') as f:
+                for block in resp.iter_content(CHUNK_SIZE):
+                    f.write(block)
+                    i += 1
+                    percent_done = int(((CHUNK_SIZE * i) / file_size) * 100)
+                    progress_bar.update(percent_done, 'Please wait', extra_info)
+
+    # TODO: Move these calls back to the "play' action? no need for mp3_paths?
+    _save_cuefile(playlist, cue_path, mp3_paths, moderators, title)
+    _save_thumbnail(image_url, show_path)
 
 
 @plugin.action()
@@ -201,11 +247,11 @@ def list_broadcasts(params):
             'label': _get_subtitle(broadcast),
             'url': plugin.get_url(
                 action='play', show_slug=params['slug'], broadcast_date=broadcast['date'],
-                moderators=params['moderators'], title=_get_subtitle(broadcast)),
+                moderators=params['moderators'], title=_get_subtitle(broadcast),
+                image=_get_img_url(broadcast) or params['show_img']),
             'icon': _get_img_url(broadcast) or params['show_img'],
             'thumbnail': _get_img_url(broadcast) or params['show_img'],
-            #'info': {'video': {'plot': broadcast['description']}},
-            'is_playable': True
+            'info': {'video': {'plot': broadcast['description']}},
         } for broadcast in _get_broadcasts(params['slug'])
     ]
 
@@ -213,32 +259,14 @@ def list_broadcasts(params):
 @plugin.action()
 def play(params):
     # TODO: TEST CUESHEETS WITH MULTIPLE PARTS
-    broadcast_data = _get_broadcast_recording_playlist(params['show_slug'], params['broadcast_date'])
-    playlist = reversed(broadcast_data['playlist'])
-    recordings = broadcast_data['recording']
-    mp3_paths = []
-    for rec_idx, url in enumerate(recordings):
-        mp3_filename = url.replace('/', '_').replace(' ', '_').lower()
-        mp3_path = os.path.join(plugin.config_dir, mp3_filename)
-        mp3_paths.append(mp3_path)
-        cue_path = mp3_path + '.cue'
-        if not os.path.isfile(mp3_path):
-            plugin.log_notice('{} does not exist, downloading...'.format(mp3_path))
-            resp = _http_get(ARCHIVE_BASE_URL + url, stream=True, auth=AUTH)
-            progress_bar = xbmcgui.DialogProgress()
-            progress_bar.create('Downloading...')
-            i = 0.0
-            file_size = int(resp.headers['Content-Length'])
-            with open(mp3_path, 'wb') as f:
-                for block in resp.iter_content(CHUNK_SIZE):
-                    f.write(block)
-                    i += 1
-                    percent_done = int(((CHUNK_SIZE * i) / file_size) * 100)
-                    progress_bar.update(percent_done, 'Please wait',
-                                        'File {} of {}'.format(rec_idx+1, len(recordings)))
-    if not os.path.isfile(cue_path):
-        _save_cuefile(playlist, cue_path, mp3_paths, params['moderators'], params['title'])
-    return 'special://profile/addon_data/{}/{}'.format(PLUGIN_NAME, mp3_filename + '.cue')
+    show_dir = hashlib.md5(params['show_slug'] + params['broadcast_date'] + params['title']).hexdigest()
+    show_path = os.path.join(plugin.config_dir, 'shows', show_dir)
+    if not os.path.exists(show_path):
+        plugin.log_notice("{} does not exist, downloading...".format(show_path))
+        _download_show(params['title'], params['moderators'], params['show_slug'],
+                       params['broadcast_date'], params['image'], show_path)
+    # TODO: Redirect to show_path directly
+    return [{'url': show_path, 'label': 'Listen'}]
 
 
 if __name__ == '__main__':

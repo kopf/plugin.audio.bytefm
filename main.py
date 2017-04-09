@@ -5,6 +5,7 @@ import shutil
 from BeautifulSoup import BeautifulSoup
 import requests
 from simpleplugin import Plugin
+import xbmc
 import xbmcgui
 
 
@@ -94,6 +95,7 @@ def _save_cuefile(playlist, cue_path, mp3_paths, moderators, broadcast_title):
         f.write(CUE_TEMPLATE.format(
             moderators=moderators, broadcast_title=broadcast_title).encode('utf-8'))
         for idx, entry in enumerate(playlist):
+            # TODO: make first entry always start at 00:00:00
             if entry['time'] > 3600:
                 timepoint = entry['time'] - 3600
                 mp3_path = mp3_paths[1]
@@ -272,6 +274,10 @@ def play(params):
         _download_show(params['title'], params['moderators'], params['show_slug'],
                        params['broadcast_date'], params['image'], show_path)
     # TODO: Redirect to show_path directly
+    # This redirects to show path:
+    #xbmc.executebuiltin('XBMC.ActivateWindow(Music,%s)' % show_path)
+    # However, the '..' parent then points to the addon_data directory,
+    # and not the list_broadcasts path in the plugin.
     return [{'url': show_path, 'label': 'Listen'}]
 
 

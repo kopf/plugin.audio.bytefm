@@ -5,7 +5,6 @@ import shutil
 from BeautifulSoup import BeautifulSoup
 import requests
 from simpleplugin import Plugin
-import xbmc
 import xbmcgui
 
 

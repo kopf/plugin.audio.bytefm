@@ -89,49 +89,51 @@ def _get_subtitle(broadcast):
     else:
         return _(u'Broadcast from {}').format(broadcast['date'])
 
-def _save_cuefile(playlist, cue_path, mp3_paths, moderators, broadcast_title):
+def _save_cuefile(playlist, cue_path, mp3_path, moderators, broadcast_title):
     plugin.log_notice("Creating CUE file at {}".format(cue_path))
     with open(cue_path, 'w') as f:
         f.write(CUE_TEMPLATE.format(
             moderators=moderators, broadcast_title=broadcast_title).encode('utf-8'))
         for idx, entry in enumerate(playlist):
-            # TODO: make first entry always start at 00:00:00
-            if entry['time'] > 3600:
-                timepoint = entry['time'] - 3600
-                mp3_path = mp3_paths[1]
-            else:
-                timepoint = entry['time']
-                mp3_path = mp3_paths[0]
-            minutes, seconds = divmod(timepoint, 60)
+            minutes, seconds = (0, 0) if idx == 0 else divmod(entry['time'], 60)
             timestamp = "%02d:%02d:00" % (minutes, seconds)
             f.write(CUE_ENTRY_TEMPLATE.format(
                 filename=mp3_path, tracknumber='%02d' % int(idx+1), title=entry['title'],
                 artist=entry['artist'], timestamp=timestamp).encode('utf-8'))
 
 def _save_thumbnail(image_url, show_path):
-    try:
-        r = _http_get(image_url, stream=True)
-    except:
-        msg = "Failed to download show thumbnail {} - ignoring.".format(image_url)
-        plugin.log_error(msg)
-    else:
-        with open(os.path.join(show_path, 'folder.jpg'), 'wb') as f:
-            r.raw.decode_content = True
-            shutil.copyfileobj(r.raw, f)
+    dest_path = os.path.join(show_path, 'folder.jpg')
+    if not os.path.exists(dest_path):
+        try:
+            resp = _http_get(image_url, stream=True)
+        except:
+            msg = "Failed to download show thumbnail {} - ignoring.".format(image_url)
+            plugin.log_error(msg)
+        else:
+            with open(dest_path, 'wb') as f:
+                resp.raw.decode_content = True
+                shutil.copyfileobj(resp.raw, f)
+    return dest_path
 
 def _download_show(title, moderators, show_slug, broadcast_date, image_url, show_path):
     plugin.log_notice("Downloading show {} to {}".format(show_slug, show_path))
     broadcast_data = _get_broadcast_recording_playlist(show_slug, broadcast_date)
-    playlist = reversed(broadcast_data['playlist'])
-    recordings = broadcast_data['recording']
-    mp3_paths = []
+    recordings = broadcast_data['recordings']
+    list_items = []
+    if not os.path.exists(show_path):
+        os.makedirs(show_path)
+    thumbnail_path = _save_thumbnail(image_url, show_path)
     for rec_idx, url in enumerate(recordings):
         mp3_filename = url.replace('/', '_').replace(' ', '_').lower()
-        if not os.path.exists(show_path):
-            os.makedirs(show_path)
-        mp3_path = os.path.join(show_path, mp3_filename)
-        mp3_paths.append(mp3_path)
+        label = 'Part {}'.format(rec_idx+1)
+        show_part_path = os.path.join(show_path, label)
+        list_items.append({'url': show_part_path, 'label': label})
+        if not os.path.exists(show_part_path):
+            os.makedirs(show_part_path)
+        shutil.copy(thumbnail_path, show_part_path)
+        mp3_path = os.path.join(show_part_path, mp3_filename)
         cue_path = mp3_path + '.cue'
+        _save_cuefile(broadcast_data['playlist'][url], cue_path, mp3_path, moderators, title)
         if not os.path.isfile(mp3_path):
             plugin.log_notice('{} does not exist, downloading...'.format(mp3_path))
             resp = _http_get(ARCHIVE_BASE_URL + url, stream=True, auth=AUTH)
@@ -147,9 +149,7 @@ def _download_show(title, moderators, show_slug, broadcast_date, image_url, show
                     percent_done = int(((CHUNK_SIZE * i) / file_size) * 100)
                     progress_bar.update(percent_done, _('Please wait'), extra_info)
 
-    # TODO: Move these calls back to the "play' action? no need for mp3_paths?
-    _save_cuefile(playlist, cue_path, mp3_paths, moderators, title)
-    _save_thumbnail(image_url, show_path)
+    return list_items
 
 
 @plugin.action()
@@ -269,16 +269,10 @@ def play(params):
     # TODO: TEST CUESHEETS WITH MULTIPLE PARTS
     show_dir = hashlib.md5(params['show_slug'] + params['broadcast_date'] + params['title']).hexdigest()
     show_path = os.path.join(plugin.config_dir, 'shows', show_dir)
-    if not os.path.exists(show_path):
-        plugin.log_notice("{} does not exist, downloading...".format(show_path))
-        _download_show(params['title'], params['moderators'], params['show_slug'],
-                       params['broadcast_date'], params['image'], show_path)
-    # TODO: Redirect to show_path directly
-    # This redirects to show path:
-    #xbmc.executebuiltin('XBMC.ActivateWindow(Music,%s)' % show_path)
-    # However, the '..' parent then points to the addon_data directory,
-    # and not the list_broadcasts path in the plugin.
-    return [{'url': show_path, 'label': 'Listen'}]
+    list_items = _download_show(
+        params['title'], params['moderators'], params['show_slug'],
+        params['broadcast_date'], params['image'], show_path)
+    return list_items
 
 
 if __name__ == '__main__':

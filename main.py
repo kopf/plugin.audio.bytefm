@@ -5,6 +5,7 @@ import shutil
 from BeautifulSoup import BeautifulSoup
 import requests
 from simpleplugin import Plugin
+import xbmc
 import xbmcgui
 
 
@@ -23,7 +24,13 @@ CHUNK_SIZE = 1024 * 1024 # 1MB
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
-AUTH = ('lol', 'lol')
+try:
+    AUTH = (plugin.addon.getSetting("byte.login.username"),
+            plugin.addon.getSetting("byte.login.password"))
+    assert all(AUTH)
+except AssertionError:
+    plugin.addon.openSettings()
+
 
 CUE_TEMPLATE = u'''PERFORMER "{moderators}"
 TITLE "{broadcast_title}"
@@ -39,6 +46,7 @@ CUE_ENTRY_TEMPLATE = u'''FILE "{filename}" MP3
 def _http_get(url, **kwargs):
     """Log and perform a HTTP GET"""
     plugin.log_notice("HTTP GET: {}".format(url))
+    kwargs['auth'] = AUTH
     resp = requests.get(url, **kwargs)
     resp.raise_for_status()
     return resp
@@ -62,12 +70,12 @@ def _get_broadcasts(slug):
 @plugin.cached(duration=60*24*7)
 def _get_broadcast_recording_playlist(show_slug, broadcast_date):
     url = BASE_URL + '/api/v1/broadcasts/{}/{}/'.format(show_slug, broadcast_date)
-    return _http_get(url, auth=AUTH).json()
+    return _http_get(url).json()
 
 @plugin.cached(duration=60*24*30) # TODO: RESET THIS CACHE WHEN USER CHANGES CREDENTIALS
 def _get_streams():
     url = BASE_URL + '/api/v1/streams/'
-    return _http_get(url, auth=AUTH).json()
+    return _http_get(url).json()
 
 @plugin.cached(duration=60*24*7)
 def _get_moderators():
@@ -133,7 +141,7 @@ def _download_show(title, moderators, show_slug, broadcast_date, image_url, show
         _save_cuefile(broadcast_data['playlist'][url], cue_path, mp3_path, moderators, title)
         if not os.path.isfile(mp3_path):
             plugin.log_notice('{} does not exist, downloading...'.format(mp3_path))
-            resp = _http_get(ARCHIVE_BASE_URL + url, stream=True, auth=AUTH)
+            resp = _http_get(ARCHIVE_BASE_URL + url, stream=True)
             progress_bar = xbmcgui.DialogProgress()
             progress_bar.create(_('Downloading...'))
             i = 0.0

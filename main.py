@@ -11,9 +11,7 @@ import xbmcgui
 plugin = Plugin()
 _ = plugin.initialize_gettext()
 
-BASE_URL = 'http://localhost:8000'
-
-LIVE_BASE_URL = 'https://byte.fm'
+BASE_URL = 'https://byte.fm'
 
 ARCHIVE_BASE_URL = 'http://archiv.byte.fm'
 
@@ -79,7 +77,7 @@ def _get_moderators():
 
 def _get_img_url(api_resp):
     if api_resp['image']:
-        return LIVE_BASE_URL + api_resp['image']
+        return BASE_URL + api_resp['image']
     return None
 
 def _get_subtitle(broadcast):
@@ -198,7 +196,7 @@ def list_moderators(params):
     return [
         {
             'label': _strip_html(moderator['name']),
-            'icon': LIVE_BASE_URL + moderator['image'] if moderator['image'] else '',
+            'icon': BASE_URL + moderator['image'] if moderator['image'] else '',
             'info': {'video': {'plot': _strip_html(moderator['description'])}},
             'url': plugin.get_url(action='list_shows', moderator_slug=moderator['slug'])
         } for moderator in _get_moderators()

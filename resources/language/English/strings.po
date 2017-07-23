@@ -14,6 +14,14 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Poedit-SearchPath-0: main.py\n"
 
+msgctxt "#30000"
+msgid "Username"
+msgstr ""
+
+msgctxt "#30001"
+msgid "Password"
+msgstr ""
+
 msgctxt "#32000"
 msgid "Broadcast from {}"
 msgstr ""

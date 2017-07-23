@@ -1,0 +1,4 @@
+<settings>
+    <setting label="30000" id="byte.login.username" type="text" visible="true" enabled="true" default=""/>
+    <setting label="30001" id="byte.login.password" type="text" visible="true" option="hidden"  enable="!eq(-1,)" default=""/>
+</settings>

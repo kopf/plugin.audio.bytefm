@@ -1,9 +1,11 @@
 import hashlib
 import os
 import shutil
+import sys
 
 from BeautifulSoup import BeautifulSoup
 import requests
+from requests.exceptions import HTTPError
 from simpleplugin import Plugin
 import xbmc
 import xbmcgui
@@ -52,7 +54,17 @@ def _http_get(url, **kwargs):
     plugin.log_notice("HTTP GET: {}".format(url))
     kwargs['auth'] = AUTH
     resp = requests.get(url, **kwargs)
-    resp.raise_for_status()
+    try:
+        resp.raise_for_status()
+    except HTTPError as e:
+        if e.response.status_code == 401:
+            xbmcgui.Dialog().ok(
+                'ByteFM', "Authentication Failed!",
+                "Please check your username and password.", '')
+            plugin.addon.openSettings()
+            sys.exit(-1)
+        else:
+            raise
     return resp
 
 def _strip_html(text):

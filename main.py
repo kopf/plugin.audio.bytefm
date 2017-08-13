@@ -12,7 +12,11 @@ import xbmcgui
 plugin = Plugin()
 _ = plugin.initialize_gettext()
 
-BASE_URL = 'https://byte.fm'
+SHOWS_CACHE = os.path.join(plugin.config_dir, 'shows')
+if not os.path.exists(SHOWS_CACHE):
+    os.mkdir(SHOWS_CACHE)
+
+BASE_URL = 'https://www.byte.fm'
 
 ARCHIVE_BASE_URL = 'http://archiv.byte.fm'
 
@@ -273,7 +277,7 @@ def list_broadcasts(params):
 def play(params):
     # TODO: TEST CUESHEETS WITH MULTIPLE PARTS
     show_dir = hashlib.md5(params['show_slug'] + params['broadcast_date'] + params['title']).hexdigest()
-    show_path = os.path.join(plugin.config_dir, 'shows', show_dir)
+    show_path = os.path.join(SHOWS_CACHE, show_dir)
     list_items = _download_show(
         params['title'], params['moderators'], params['show_slug'],
         params['broadcast_date'], params['image'], show_path)

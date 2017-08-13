@@ -59,8 +59,8 @@ def _http_get(url, **kwargs):
     except HTTPError as e:
         if e.response.status_code == 401:
             xbmcgui.Dialog().ok(
-                'ByteFM', "Authentication Failed!",
-                "Please check your username and password.", '')
+                'ByteFM', _("Authentication Failed!"),
+                _("Please check your username and password."), '')
             plugin.addon.openSettings()
             sys.exit(-1)
         else:

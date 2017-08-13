@@ -53,3 +53,11 @@ msgstr ""
 msgctxt "#32007"
 msgid "Browse shows by moderator"
 msgstr ""
+
+msgctxt "#32008"
+msgid "Authentication Failed!"
+msgstr ""
+
+msgctxt "#32009"
+msgid "Please check your username and password."
+msgstr ""

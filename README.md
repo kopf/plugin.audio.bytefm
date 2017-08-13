@@ -1,8 +1,10 @@
 # plugin.audio.bytefm
 
-[![Demo Video](https://img.youtube.com/vi/lm1gTMhj7Zk/0.jpg)](https://www.youtube.com/watch?v=lm1gTMhj7Zk)
-
 Listen to [ByteFM](https://www.byte.fm) live or browse the archives with this Kodi plugin.
+
+## Demo Video
+
+[![Demo Video](https://img.youtube.com/vi/lm1gTMhj7Zk/0.jpg)](https://www.youtube.com/watch?v=lm1gTMhj7Zk)
 
 ## Features
 

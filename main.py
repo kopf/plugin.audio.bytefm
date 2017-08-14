@@ -33,9 +33,9 @@ THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 try:
     AUTH = (plugin.addon.getSetting("byte.login.username"),
             plugin.addon.getSetting("byte.login.password"))
-    assert all(AUTH)
-except AssertionError:
-    plugin.addon.openSettings()
+except:
+    plugin.log_error("ByteFM credentials not set. Using None.")
+    AUTH = None
 
 
 CUE_TEMPLATE = u'''PERFORMER "{moderators}"

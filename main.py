@@ -84,8 +84,9 @@ def _get_broadcasts(slug):
     return _http_get(BASE_URL + '/api/v1/broadcasts/{}/'.format(slug)).json()
 
 @plugin.cached(duration=60*24*7)
-def _get_broadcast_recording_playlist(show_slug, broadcast_date):
-    url = BASE_URL + '/api/v1/broadcasts/{}/{}/'.format(show_slug, broadcast_date)
+def _get_broadcast_recording_playlist(show_slug, broadcast_slug, broadcast_date):
+    url = BASE_URL + '/api/v1/broadcasts/{}/{}/{}'.format(
+        show_slug, broadcast_date, broadcast_slug if broadcast_slug else '')
     return _http_get(url).json()
 
 @plugin.cached(duration=60*24*30) # TODO: RESET THIS CACHE WHEN USER CHANGES CREDENTIALS
@@ -136,9 +137,9 @@ def _save_thumbnail(image_url, show_path):
                 shutil.copyfileobj(resp.raw, f)
     return dest_path
 
-def _download_show(title, moderators, show_slug, broadcast_date, image_url, show_path):
+def _download_show(title, moderators, show_slug, broadcast_slug, broadcast_date, image_url, show_path):
     plugin.log_notice("Downloading show {} to {}".format(show_slug, show_path))
-    broadcast_data = _get_broadcast_recording_playlist(show_slug, broadcast_date)
+    broadcast_data = _get_broadcast_recording_playlist(show_slug, broadcast_slug, broadcast_date)
     recordings = broadcast_data['recordings']
     list_items = []
     if not os.path.exists(show_path):
@@ -277,6 +278,7 @@ def list_broadcasts(params):
             'url': plugin.get_url(
                 action='play', show_slug=params['slug'], broadcast_date=broadcast['date'],
                 moderators=params['moderators'], title=_get_subtitle(broadcast),
+                broadcast_slug=broadcast['slug'],
                 image=_get_img_url(broadcast) or params['show_img']),
             'icon': _get_img_url(broadcast) or params['show_img'],
             'thumbnail': _get_img_url(broadcast) or params['show_img'],
@@ -292,7 +294,8 @@ def play(params):
     show_path = os.path.join(SHOWS_CACHE, show_dir)
     list_items = _download_show(
         params['title'], params['moderators'], params['show_slug'],
-        params['broadcast_date'], params['image'], show_path)
+        params.get('broadcast_slug'), params['broadcast_date'], params['image'],
+        show_path)
     return list_items
 
 

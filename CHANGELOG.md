@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 0.2.0 (2017-12-24)
+* Fixed playback of shows (e.g. ByteFM Magazin) that may have more than one broadcast per day
+
 ## Version 0.1.2 (2017-08-14)
 * Expanded documentation
 * Cleaned up user auth prompt when credentials are missing or invalid

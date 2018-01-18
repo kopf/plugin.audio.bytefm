@@ -160,7 +160,7 @@ def _download_show(title, moderators, show_slug, broadcast_slug, broadcast_date,
             plugin.log_notice('{} does not exist, downloading...'.format(mp3_path))
             resp = _http_get(ARCHIVE_BASE_URL + url, stream=True)
             progress_bar = xbmcgui.DialogProgress()
-            progress_bar.create(_('Downloading...'))
+            progress_bar.create(_('Please wait'))
             i = 0.0
             file_size = int(resp.headers['Content-Length'])
             extra_info = _('File {} of {}').format(rec_idx + 1, len(recordings))
@@ -169,7 +169,7 @@ def _download_show(title, moderators, show_slug, broadcast_slug, broadcast_date,
                     f.write(block)
                     i += 1
                     percent_done = int(((CHUNK_SIZE * i) / file_size) * 100)
-                    progress_bar.update(percent_done, _('Please wait'), extra_info)
+                    progress_bar.update(percent_done, _('Downloading...'), extra_info)
 
     return list_items
 

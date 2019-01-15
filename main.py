@@ -131,6 +131,7 @@ def _save_thumbnail(image_url, show_path):
         except:
             msg = "Failed to download show thumbnail {} - ignoring.".format(image_url)
             plugin.log_error(msg)
+            dest_path = None
         else:
             with open(dest_path, 'wb') as f:
                 resp.raw.decode_content = True
@@ -152,7 +153,8 @@ def _download_show(title, moderators, show_slug, broadcast_slug, broadcast_date,
         list_items.append({'url': show_part_path, 'label': label})
         if not os.path.exists(show_part_path):
             os.makedirs(show_part_path)
-        shutil.copy(thumbnail_path, show_part_path)
+        if thumbnail_path:
+            shutil.copy(thumbnail_path, show_part_path)
         mp3_path = os.path.join(show_part_path, mp3_filename)
         cue_path = mp3_path + '.cue'
         _save_cuefile(broadcast_data['playlist'][url], cue_path, mp3_path, moderators, title)

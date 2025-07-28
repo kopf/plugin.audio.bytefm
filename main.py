@@ -1,9 +1,9 @@
 import hashlib
 import os
+import re
 import shutil
 import sys
 
-from bs4 import BeautifulSoup
 import requests
 from requests.exceptions import HTTPError
 from simpleplugin import Plugin
@@ -70,8 +70,10 @@ def _http_get(url, **kwargs):
     return resp
 
 def _strip_html(text):
-    text = text or ''
-    return BeautifulSoup(text, features="html.parser").getText()
+    if not text:
+        return ''
+    # Remove all tags
+    return re.sub(r'<[^>]+>', '', text)
 
 @plugin.cached(duration=60*24*7)
 def _get_genres():

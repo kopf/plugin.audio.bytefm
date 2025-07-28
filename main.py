@@ -3,7 +3,7 @@ import os
 import shutil
 import sys
 
-from BeautifulSoup import BeautifulSoup
+from bs4 import BeautifulSoup
 import requests
 from requests.exceptions import HTTPError
 from simpleplugin import Plugin
@@ -31,17 +31,19 @@ CHUNK_SIZE = 1024 * 1024 # 1MB
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 try:
-    AUTH = (plugin.addon.getSetting("byte.login.username"),
-            plugin.addon.getSetting("byte.login.password"))
-except:
+    AUTH = (
+        plugin.addon.getSetting("byte.login.username"),
+        plugin.addon.getSetting("byte.login.password")
+    )
+except Exception:
     plugin.log_error("ByteFM credentials not set. Using None.")
     AUTH = None
 
 
-CUE_TEMPLATE = u'''PERFORMER "{moderators}"
+CUE_TEMPLATE = '''PERFORMER "{moderators}"
 TITLE "{broadcast_title}"
 '''
-CUE_ENTRY_TEMPLATE = u'''FILE "{filename}" MP3
+CUE_ENTRY_TEMPLATE = '''FILE "{filename}" MP3
   TRACK {tracknumber} AUDIO
     TITLE "{title}"
     PERFORMER "{artist}"
@@ -57,7 +59,7 @@ def _http_get(url, **kwargs):
     try:
         resp.raise_for_status()
     except HTTPError as e:
-        if e.response.status_code == 401:
+        if e.response is not None and e.response.status_code == 401:
             xbmcgui.Dialog().ok(
                 'ByteFM', _("Authentication Failed!"),
                 _("Please check your username and password."), '')
@@ -69,35 +71,34 @@ def _http_get(url, **kwargs):
 
 def _strip_html(text):
     text = text or ''
-    return BeautifulSoup(text).getText()
+    return BeautifulSoup(text, features="html.parser").getText()
 
 @plugin.cached(duration=60*24*7)
 def _get_genres():
-    return _http_get(BASE_URL + '/api/v1/genres/').json()
+    return _http_get(f'{BASE_URL}/api/v1/genres/').json()
 
 @plugin.cached()
 def _get_shows():
-    return _http_get(BASE_URL + '/api/v1/broadcasts/').json()
+    return _http_get(f'{BASE_URL}/api/v1/broadcasts/').json()
 
 @plugin.cached()
 def _get_broadcasts(slug):
-    return _http_get(BASE_URL + '/api/v1/broadcasts/{}/'.format(slug)).json()
+    return _http_get(f'{BASE_URL}/api/v1/broadcasts/{slug}/').json()
 
 @plugin.cached(duration=60*24*7)
 def _get_broadcast_recording_playlist(show_slug, broadcast_slug, broadcast_date):
-    url = BASE_URL + '/api/v1/broadcasts/{}/{}/{}'.format(
-        show_slug, broadcast_date, broadcast_slug if broadcast_slug else '')
+    if not broadcast_slug:
+        broadcast_slug = ''
+    url = f'{BASE_URL}/api/v1/broadcasts/{show_slug}/{broadcast_date}/{broadcast_slug}'
     return _http_get(url).json()
 
 @plugin.cached(duration=60*24*30) # TODO: RESET THIS CACHE WHEN USER CHANGES CREDENTIALS
 def _get_streams():
-    url = BASE_URL + '/api/v1/streams/'
-    return _http_get(url).json()
+    return _http_get(f'{BASE_URL}/api/v1/streams/').json()
 
 @plugin.cached(duration=60*24*7)
 def _get_moderators():
-    url = BASE_URL + '/api/v1/moderators/'
-    moderators = _http_get(url).json()
+    moderators = _http_get(f'{BASE_URL}/api/v1/moderators/').json()
     return sorted(moderators, key=lambda k: k['name'])
 
 def _get_img_url(api_resp):
@@ -107,28 +108,28 @@ def _get_img_url(api_resp):
 
 def _get_subtitle(broadcast):
     if broadcast.get('subtitle'):
-        return u'{} ({})'.format(_strip_html(broadcast['subtitle']), broadcast['date'])
+        return '{} ({})'.format(_strip_html(broadcast['subtitle']), broadcast['date'])
     else:
-        return _(u'Broadcast from {}').format(broadcast['date'])
+        return _('Broadcast from {}').format(broadcast['date'])
 
 def _save_cuefile(playlist, cue_path, mp3_path, moderators, broadcast_title):
     plugin.log_notice("Creating CUE file at {}".format(cue_path))
-    with open(cue_path, 'w') as f:
+    with open(cue_path, 'w', encoding='utf-8') as f:
         f.write(CUE_TEMPLATE.format(
-            moderators=moderators, broadcast_title=broadcast_title).encode('utf-8'))
+            moderators=moderators, broadcast_title=broadcast_title))
         for idx, entry in enumerate(playlist):
             minutes, seconds = (0, 0) if idx == 0 else divmod(entry['time'], 60)
-            timestamp = "%02d:%02d:00" % (minutes, seconds)
+            timestamp = f"{minutes:02d}:{seconds:02d}:00"
             f.write(CUE_ENTRY_TEMPLATE.format(
-                filename=mp3_path, tracknumber='%02d' % int(idx+1), title=entry['title'],
-                artist=entry['artist'], timestamp=timestamp).encode('utf-8'))
+                filename=mp3_path, tracknumber=f'{int(idx+1):02d}', title=entry['title'],
+                artist=entry['artist'], timestamp=timestamp))
 
 def _save_thumbnail(image_url, show_path):
     dest_path = os.path.join(show_path, 'folder.jpg')
     if not os.path.exists(dest_path):
         try:
             resp = _http_get(image_url, stream=True)
-        except:
+        except Exception:
             msg = "Failed to download show thumbnail {} - ignoring.".format(image_url)
             plugin.log_error(msg)
             dest_path = None
@@ -148,7 +149,7 @@ def _download_show(title, moderators, show_slug, broadcast_slug, broadcast_date,
     thumbnail_path = _save_thumbnail(image_url, show_path)
     for rec_idx, url in enumerate(recordings):
         mp3_filename = url.replace('/', '_').replace(' ', '_').lower()
-        label = 'Part {}'.format(rec_idx+1)
+        label = f'Part {rec_idx+1}'
         show_part_path = os.path.join(show_path, label)
         list_items.append({'url': show_part_path, 'label': label})
         if not os.path.exists(show_part_path):
@@ -262,7 +263,7 @@ def list_shows(params):
         try:
             moderator = [m for m in _get_moderators() if m['slug'] == params['moderator_slug']][0]
         except IndexError:
-            raise Exception("Invalid moderator {} - not found!".format(params['moderator_slug']))
+            raise Exception(f"Invalid moderator {params['moderator_slug']} - not found!")
         for show in shows:
             if show['slug'] in moderator['broadcasts']:
                 items.append(_create_show_listitem(show))
@@ -292,7 +293,8 @@ def list_broadcasts(params):
 @plugin.action()
 def play(params):
     # TODO: TEST CUESHEETS WITH MULTIPLE PARTS
-    show_dir = hashlib.md5(params['show_slug'] + params['broadcast_date'] + params['title']).hexdigest()
+    concat_str = params['show_slug'] + params['broadcast_date'] + params['title']
+    show_dir = hashlib.md5(concat_str.encode('utf-8')).hexdigest()
     show_path = os.path.join(SHOWS_CACHE, show_dir)
     list_items = _download_show(
         params['title'], params['moderators'], params['show_slug'],

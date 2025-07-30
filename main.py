@@ -14,12 +14,15 @@ from requests.exceptions import HTTPError
 from simpleplugin import Plugin
 import xbmc
 import xbmcgui
+import xbmcaddon
 
 
 plugin = Plugin()
 _ = plugin.initialize_gettext()
 
-SHOWS_CACHE = os.path.join(plugin.config_dir, 'shows')
+ADDON = xbmcaddon.Addon()
+
+SHOWS_CACHE = os.path.join(xbmc.translatePath(ADDON.getAddonInfo('profile')), 'shows')
 if not os.path.exists(SHOWS_CACHE):
     os.mkdir(SHOWS_CACHE)
 
@@ -41,8 +44,8 @@ THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 try:
     AUTH = (
-        plugin.addon.getSetting("byte.login.username"),
-        plugin.addon.getSetting("byte.login.password")
+        ADDON.getSettingString("byte.login.username"),
+        ADDON.getSettingString("byte.login.password")
     )
 except Exception:
     xbmc.log("[ByteFM] Credentials not set. Using None.", xbmc.LOGERROR)
@@ -125,7 +128,7 @@ def _http_get(url, **kwargs):
             xbmcgui.Dialog().ok(
                 'ByteFM', _("Authentication Failed!"),
                 _("Please check your username and password."), '')
-            plugin.addon.openSettings()
+            ADDON.openSettings()
             sys.exit(-1)
         else:
             raise

@@ -7,7 +7,7 @@ import re
 import shutil
 import sys
 import time
-from urllib.parse import urlencode
+from urllib.parse import urlencode, parse_qsl
 
 import requests
 from requests.exceptions import HTTPError
@@ -15,12 +15,15 @@ from simpleplugin import Plugin
 import xbmc
 import xbmcgui
 import xbmcaddon
+import xbmcplugin
 
 
 plugin = Plugin()
 _ = plugin.initialize_gettext()
 
 ADDON = xbmcaddon.Addon()
+
+HANDLE = int(sys.argv[1])
 
 SHOWS_CACHE = os.path.join(xbmc.translatePath(ADDON.getAddonInfo('profile')), 'shows')
 if not os.path.exists(SHOWS_CACHE):
@@ -244,76 +247,72 @@ def _download_show(title, moderators, show_slug, broadcast_slug, broadcast_date,
     return list_items
 
 
-@plugin.action()
-def root(params):
+def list_root():
     streams = _get_streams()
     stream_url = streams.get('hq', streams['sq'])
-    items = [
+    li = xbmcgui.ListItem(label=_('Livestream'))
+    li.setArt(
         {
-            'label': _('Livestream'),
-            'url': stream_url,
-            'icon': os.path.join(THIS_DIR, 'icon.png'),
-            'is_playable': True
-        },
-        {
-            'label': _('Browse shows by title'),
-            'url': plugin_url(action='letters'),
-        },
-        {
-            'label': _('Browse shows by genre'),
-            'url': plugin_url(action='list_genres'),
-        },
-        {
-            'label': _('Browse shows by moderator'),
-            'url': plugin_url(action='list_moderators'),
+            "icon": os.path.join(THIS_DIR, 'icon.png'),
+            "thumb": os.path.join(THIS_DIR, 'icon.png'),
         }
-    ]
-    return items
+    )
+    li.setProperty('IsPlayable', 'true')
+    xbmcplugin.addDirectoryItem(HANDLE, stream_url, li, False)
+
+    li = xbmcgui.ListItem(label=_('Browse shows by title'))
+    xbmcplugin.addDirectoryItem(HANDLE, plugin_url(action='letters'), li, True)
+
+    li = xbmcgui.ListItem(label=_('Browse shows by genre'))
+    xbmcplugin.addDirectoryItem(HANDLE, plugin_url(action='list_genres'), li, True)
+
+    li = xbmcgui.ListItem(label=_('Browse shows by moderator'))
+    xbmcplugin.addDirectoryItem(HANDLE, plugin_url(action='list_moderators'), li, True)
+
+    xbmcplugin.endOfDirectory(HANDLE)
+
+def list_letters():
+    for letter in LETTERS:
+        li = xbmcgui.ListItem(label=letter)
+        url = plugin_url(action='list_shows', letter=letter)
+        xbmcplugin.addDirectoryItem(HANDLE, url, li, True)
+    xbmcplugin.endOfDirectory(HANDLE)
 
 
-@plugin.action()
-def letters(params):
-    return [{'label': letter, 'url': plugin_url(action='list_shows', letter=letter)} for letter in LETTERS]
+def list_genres():
+    for genre in _get_genres():
+        li = xbmcgui.ListItem(label=genre)
+        url = plugin_url(action='list_shows', genre=genre)
+        xbmcplugin.addDirectoryItem(HANDLE, url, li, True)
+    xbmcplugin.endOfDirectory(HANDLE)
 
 
-@plugin.action()
-def list_genres(params):
-    return [
-        {
-            'label': genre,
-            'url': plugin_url(action='list_shows', genre=genre)
-        } for genre in _get_genres()
-    ]
+def list_moderators():
+    for moderator in _get_moderators():
+        li = xbmcgui.ListItem(label=_strip_html(moderator['name']))
+        if moderator['image']:
+            li.setArt({'icon': BASE_URL + moderator['image'], 'thumb': BASE_URL + moderator['image']})
+        li.setInfo('video', {'plot': _strip_html(moderator['description'])})
+        url = plugin_url(action='list_shows', moderator_slug=moderator['slug'])
+        xbmcplugin.addDirectoryItem(HANDLE, url, li, True)
+    xbmcplugin.endOfDirectory(HANDLE)
 
-
-@plugin.action()
-def list_moderators(params):
-    return [
-        {
-            'label': _strip_html(moderator['name']),
-            'icon': BASE_URL + moderator['image'] if moderator['image'] else '',
-            'info': {'video': {'plot': _strip_html(moderator['description'])}},
-            'url': plugin_url(action='list_shows', moderator_slug=moderator['slug'])
-        } for moderator in _get_moderators()
-    ]
-
-
-@plugin.action()
 def list_shows(params):
-    items = []
     shows = _get_shows()
 
     def _create_show_listitem(show):
         show_img = _get_img_url(show)
-        return {
-            'label': _strip_html(show['title']),
-            'url': plugin_url(
-                action='list_broadcasts', slug=show['slug'], show_img=show_img,
-                moderators=show['moderators'] or 'Unknown', show_title=show['title']),
-            'thumbnail': _get_img_url(show),
-            'icon': _get_img_url(show),
-            'info': {'video': {'plot': _strip_html(show['description'])}}
-        }
+        li = xbmcgui.ListItem(label=_strip_html(show['title']))
+        li.setArt({'icon': show_img, 'thumb': show_img})
+        li.setInfo('video', {'plot': _strip_html(show['description'])})
+        url = plugin_url(
+            action = 'list_broadcasts',
+            slug = show['slug'],
+            show_img = show_img or '',
+            moderators = show['moderators'] or 'Unknown',
+            show_title = show['title']
+        )
+        xbmcplugin.addDirectoryItem(HANDLE, url, li, True)
 
     if params.get('letter'):
         letter = params['letter'].lower()
@@ -321,11 +320,11 @@ def list_shows(params):
             letter = '0123456789'
         for show in shows:
             if show['title'].lower()[0] in letter:
-                items.append(_create_show_listitem(show))
+                _create_show_listitem(show)
     elif params.get('genre'):
         for show in shows:
             if params['genre'] in show['genres']:
-                items.append(_create_show_listitem(show))
+                _create_show_listitem(show)
     elif params.get('moderator_slug'):
         try:
             moderator = [m for m in _get_moderators() if m['slug'] == params['moderator_slug']][0]
@@ -333,31 +332,33 @@ def list_shows(params):
             raise Exception(f"Invalid moderator {params['moderator_slug']} - not found!")
         for show in shows:
             if show['slug'] in moderator['broadcasts']:
-                items.append(_create_show_listitem(show))
+                _create_show_listitem(show)
     else:
         raise Exception("Need to specify at least a letter, genre or moderator slug!")
-    return items
+    xbmcplugin.endOfDirectory(HANDLE)
 
 
-@plugin.action()
 def list_broadcasts(params):
     # TODO: url: play or display info?
-    return [
-        {
-            'label': _get_subtitle(broadcast),
-            'url': plugin_url(
-                action='play', show_slug=params['slug'], broadcast_date=broadcast['date'],
-                moderators=params['moderators'], title=_get_subtitle(broadcast),
-                broadcast_slug=broadcast['slug'],
-                image=_get_img_url(broadcast) or params['show_img']),
-            'icon': _get_img_url(broadcast) or params['show_img'],
-            'thumbnail': _get_img_url(broadcast) or params['show_img'],
-            'info': {'video': {'plot': broadcast['description']}},
-        } for broadcast in _get_broadcasts(params['slug'])
-    ]
+    for broadcast in _get_broadcasts(params['slug']):
+        label = _get_subtitle(broadcast)
+        li = xbmcgui.ListItem(label=label)
+        img = _get_img_url(broadcast) or params.get('show_img')
+        li.setArt({'icon': img, 'thumb': img})
+        li.setInfo('video', {'plot': broadcast['description']})
+        url = plugin_url(
+            action = 'play',
+            show_slug = params['slug'],
+            broadcast_date = broadcast['date'],
+            moderators = params['moderators'],
+            title = label,
+            broadcast_slug = broadcast['slug'],
+            image = img
+        )
+        xbmcplugin.addDirectoryItem(HANDLE, url, li, False)
+    xbmcplugin.endOfDirectory(HANDLE)
 
 
-@plugin.action()
 def play(params):
     # TODO: TEST CUESHEETS WITH MULTIPLE PARTS
     concat_str = params['show_slug'] + params['broadcast_date'] + params['title']
@@ -367,8 +368,32 @@ def play(params):
         params['title'], params['moderators'], params['show_slug'],
         params.get('broadcast_slug'), params['broadcast_date'], params['image'],
         show_path)
-    return list_items
+    for item in list_items:
+        li = xbmcgui.ListItem(label=item['label'])
+        xbmcplugin.addDirectoryItem(HANDLE, item['url'], li, False)
+    xbmcplugin.endOfDirectory(HANDLE)
 
+
+def main():
+    params = dict(parse_qsl(sys.argv[2].removeprefix("?")))
+    action = params.get('action', 'root')
+    if action == 'root':
+        list_root()
+    elif action == 'letters':
+        list_letters()
+    elif action == 'list_genres':
+        list_genres()
+    elif action == 'list_moderators':
+        list_moderators()
+    elif action == 'list_shows':
+        list_shows(params)
+    elif action == 'list_broadcasts':
+        list_broadcasts(params)
+    elif action == 'play':
+        play(params)
+    else:
+        xbmc.log(f"[ByteFM] Unknown action: {action}", xbmc.LOGERROR)
+        xbmcplugin.endOfDirectory(HANDLE)
 
 if __name__ == '__main__':
-    plugin.run()
+    main()

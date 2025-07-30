@@ -44,7 +44,7 @@ try:
         plugin.addon.getSetting("byte.login.password")
     )
 except Exception:
-    plugin.log_error("ByteFM credentials not set. Using None.")
+    xbmc.log("[ByteFM] Credentials not set. Using None.", xbmc.LOGERROR)
     AUTH = None
 
 
@@ -107,7 +107,7 @@ def cached(duration=10):
 
 def _http_get(url, **kwargs):
     """Log and perform a HTTP GET"""
-    plugin.log_notice("HTTP GET: {}".format(url))
+    xbmc.log(f"[ByteFM] HTTP GET: {url}", xbmc.LOGINFO)
     kwargs['auth'] = AUTH
     resp = requests.get(url, **kwargs)
     try:
@@ -169,7 +169,7 @@ def _get_subtitle(broadcast):
         return _('Broadcast from {}').format(broadcast['date'])
 
 def _save_cuefile(playlist, cue_path, mp3_path, moderators, broadcast_title):
-    plugin.log_notice("Creating CUE file at {}".format(cue_path))
+    xbmc.log(f"[ByteFM] Creating CUE file at {cue_path}", xbmc.LOGINFO)
     with open(cue_path, 'w', encoding='utf-8') as f:
         f.write(CUE_TEMPLATE.format(
             moderators=moderators, broadcast_title=broadcast_title))
@@ -186,8 +186,8 @@ def _save_thumbnail(image_url, show_path):
         try:
             resp = _http_get(image_url, stream=True)
         except Exception:
-            msg = "Failed to download show thumbnail {} - ignoring.".format(image_url)
-            plugin.log_error(msg)
+            msg = f"[ByteFM] Failed to download show thumbnail {image_url} - ignoring."
+            xbmc.log(msg, xbmc.LOGERROR)
             dest_path = None
         else:
             with open(dest_path, 'wb') as f:
@@ -196,7 +196,7 @@ def _save_thumbnail(image_url, show_path):
     return dest_path
 
 def _download_show(title, moderators, show_slug, broadcast_slug, broadcast_date, image_url, show_path):
-    plugin.log_notice("Downloading show {} to {}".format(show_slug, show_path))
+    xbmc.log(f"[ByteFM] Downloading show {show_slug} to {show_path}", xbmc.LOGINFO)
     broadcast_data = _get_broadcast_recording_playlist(show_slug, broadcast_slug, broadcast_date)
     recordings = broadcast_data['recordings']
     list_items = []
@@ -216,7 +216,7 @@ def _download_show(title, moderators, show_slug, broadcast_slug, broadcast_date,
         cue_path = mp3_path + '.cue'
         _save_cuefile(broadcast_data['playlist'][url], cue_path, mp3_path, moderators, title)
         if not os.path.isfile(mp3_path):
-            plugin.log_notice('{} does not exist, downloading...'.format(mp3_path))
+            xbmc.log(f'[ByteFM] {mp3_path} does not exist, downloading...', xbmc.LOGINFO)
             resp = _http_get(ARCHIVE_BASE_URL + url, stream=True)
             progress_bar = xbmcgui.DialogProgress()
             progress_bar.create(_('Please wait'))

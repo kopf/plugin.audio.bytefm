@@ -1,8 +1,12 @@
+from datetime import datetime, timedelta
+import functools
 import hashlib
 import os
+import pickle
 import re
 import shutil
 import sys
+import time
 
 import requests
 from requests.exceptions import HTTPError
@@ -17,6 +21,10 @@ _ = plugin.initialize_gettext()
 SHOWS_CACHE = os.path.join(plugin.config_dir, 'shows')
 if not os.path.exists(SHOWS_CACHE):
     os.mkdir(SHOWS_CACHE)
+
+INFO_CACHE =  os.path.join(xbmcvfs.translatePath(ADDON.getAddonInfo('profile')), 'info')
+if not xbmcvfs.exists(INFO_CACHE):
+    xbmcvfs.mkdirs(INFO_CACHE)
 
 BASE_URL = 'https://www.byte.fm'
 
@@ -51,6 +59,52 @@ CUE_ENTRY_TEMPLATE = '''FILE "{filename}" MP3
 '''
 
 
+def cached(duration=10):
+    """
+    Cached decorator
+
+    Used to cache function return data
+
+    Usage::
+
+        @plugin.cached(30)
+        def my_func(*args, **kwargs):
+            # Do some stuff
+            return value
+
+    :param duration: caching duration in min (positive values only)
+    :type duration: int
+    :raises ValueError: if duration is zero or negative
+    """
+    def outer_wrapper(func):
+        @functools.wraps(func)
+        def inner_wrapper(*args, **kwargs):
+            current_time = datetime.now()
+            key = hashlib.md5((func.__name__ + str(args) + str(kwargs)).encode("utf-8")).hexdigest()
+            fname = os.path.join(INFO_CACHE, key+".pcl")
+            try:
+                if not xbmcvfs.exists(fname):
+                    raise KeyError
+                xbmc.log(f'[ByteFM] Exists: {fname}', xbmc.LOGDEBUG)
+                timestamp = datetime.fromtimestamp(xbmcvfs.Stat(fname).st_mtime())
+                xbmc.log(f'[ByteFM] Timestamp: {timestamp}', xbmc.LOGDEBUG)
+                if current_time - timestamp > timedelta(minutes=duration):
+                    raise KeyError
+                xbmc.log(f'[ByteFM] Read: {fname}', xbmc.LOGDEBUG)
+                with open(fname, "rb") as fp:
+                    data = pickle.load(fp)
+                xbmc.log(f'[ByteFM] Cache hit: {key}', xbmc.LOGDEBUG)
+            except (KeyError, pickle.UnpicklingError):
+                xbmc.log(f'[ByteFM] Cache miss: {key}', xbmc.LOGDEBUG)
+                data = func(*args, **kwargs)
+                with open(fname, "wb") as fp:
+                    pickle.dump(data, fp)
+            return data
+        return inner_wrapper
+    return outer_wrapper
+
+
+
 def _http_get(url, **kwargs):
     """Log and perform a HTTP GET"""
     plugin.log_notice("HTTP GET: {}".format(url))
@@ -75,30 +129,30 @@ def _strip_html(text):
     # Remove all tags
     return re.sub(r'<[^>]+>', '', text)
 
-@plugin.cached(duration=60*24*7)
+@cached(duration=60*24*7)
 def _get_genres():
     return _http_get(f'{BASE_URL}/api/v1/genres/').json()
 
-@plugin.cached()
+@cached()
 def _get_shows():
     return _http_get(f'{BASE_URL}/api/v1/broadcasts/').json()
 
-@plugin.cached()
+@cached()
 def _get_broadcasts(slug):
     return _http_get(f'{BASE_URL}/api/v1/broadcasts/{slug}/').json()
 
-@plugin.cached(duration=60*24*7)
+@cached(duration=60*24*7)
 def _get_broadcast_recording_playlist(show_slug, broadcast_slug, broadcast_date):
     if not broadcast_slug:
         broadcast_slug = ''
     url = f'{BASE_URL}/api/v1/broadcasts/{show_slug}/{broadcast_date}/{broadcast_slug}'
     return _http_get(url).json()
 
-@plugin.cached(duration=60*24*30) # TODO: RESET THIS CACHE WHEN USER CHANGES CREDENTIALS
+@cached(duration=60*24*30) # TODO: RESET THIS CACHE WHEN USER CHANGES CREDENTIALS
 def _get_streams():
     return _http_get(f'{BASE_URL}/api/v1/streams/').json()
 
-@plugin.cached(duration=60*24*7)
+@cached(duration=60*24*7)
 def _get_moderators():
     moderators = _http_get(f'{BASE_URL}/api/v1/moderators/').json()
     return sorted(moderators, key=lambda k: k['name'])

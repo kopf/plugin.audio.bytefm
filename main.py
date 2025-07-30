@@ -7,6 +7,7 @@ import re
 import shutil
 import sys
 import time
+from urllib.parse import urlencode
 
 import requests
 from requests.exceptions import HTTPError
@@ -103,6 +104,13 @@ def cached(duration=10):
         return inner_wrapper
     return outer_wrapper
 
+
+def plugin_url(**kwargs):
+    """Build plugin:// url with args."""
+    if kwargs:
+        return sys.argv[0] + '?' + urlencode(kwargs, doseq=True)
+    else:
+        return sys.argv[0]
 
 
 def _http_get(url, **kwargs):
@@ -246,15 +254,15 @@ def root(params):
         },
         {
             'label': _('Browse shows by title'),
-            'url': plugin.get_url(action='letters'),
+            'url': plugin_url(action='letters'),
         },
         {
             'label': _('Browse shows by genre'),
-            'url': plugin.get_url(action='list_genres'),
+            'url': plugin_url(action='list_genres'),
         },
         {
             'label': _('Browse shows by moderator'),
-            'url': plugin.get_url(action='list_moderators'),
+            'url': plugin_url(action='list_moderators'),
         }
     ]
     return items
@@ -262,7 +270,7 @@ def root(params):
 
 @plugin.action()
 def letters(params):
-    return [{'label': letter, 'url': plugin.get_url(action='list_shows', letter=letter)} for letter in LETTERS]
+    return [{'label': letter, 'url': plugin_url(action='list_shows', letter=letter)} for letter in LETTERS]
 
 
 @plugin.action()
@@ -270,7 +278,7 @@ def list_genres(params):
     return [
         {
             'label': genre,
-            'url': plugin.get_url(action='list_shows', genre=genre)
+            'url': plugin_url(action='list_shows', genre=genre)
         } for genre in _get_genres()
     ]
 
@@ -282,7 +290,7 @@ def list_moderators(params):
             'label': _strip_html(moderator['name']),
             'icon': BASE_URL + moderator['image'] if moderator['image'] else '',
             'info': {'video': {'plot': _strip_html(moderator['description'])}},
-            'url': plugin.get_url(action='list_shows', moderator_slug=moderator['slug'])
+            'url': plugin_url(action='list_shows', moderator_slug=moderator['slug'])
         } for moderator in _get_moderators()
     ]
 
@@ -296,7 +304,7 @@ def list_shows(params):
         show_img = _get_img_url(show)
         return {
             'label': _strip_html(show['title']),
-            'url': plugin.get_url(
+            'url': plugin_url(
                 action='list_broadcasts', slug=show['slug'], show_img=show_img,
                 moderators=show['moderators'] or 'Unknown', show_title=show['title']),
             'thumbnail': _get_img_url(show),
@@ -334,7 +342,7 @@ def list_broadcasts(params):
     return [
         {
             'label': _get_subtitle(broadcast),
-            'url': plugin.get_url(
+            'url': plugin_url(
                 action='play', show_slug=params['slug'], broadcast_date=broadcast['date'],
                 moderators=params['moderators'], title=_get_subtitle(broadcast),
                 broadcast_slug=broadcast['slug'],

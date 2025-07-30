@@ -12,6 +12,7 @@ from urllib.parse import urlencode, parse_qsl
 import requests
 from requests.exceptions import HTTPError
 import xbmc
+import xbmcvfs
 import xbmcgui
 import xbmcaddon
 import xbmcplugin
@@ -22,9 +23,9 @@ __localize__ = ADDON.getLocalizedString
 
 HANDLE = int(sys.argv[1])
 
-SHOWS_CACHE = os.path.join(xbmc.translatePath(ADDON.getAddonInfo('profile')), 'shows')
-if not os.path.exists(SHOWS_CACHE):
-    os.mkdir(SHOWS_CACHE)
+SHOWS_CACHE = os.path.join(xbmcvfs.translatePath(ADDON.getAddonInfo('profile')), 'shows')
+if not xbmcvfs.exists(SHOWS_CACHE):
+    xbmcvfs.mkdirs(SHOWS_CACHE)
 
 INFO_CACHE =  os.path.join(xbmcvfs.translatePath(ADDON.getAddonInfo('profile')), 'info')
 if not xbmcvfs.exists(INFO_CACHE):
@@ -191,7 +192,7 @@ def _save_cuefile(playlist, cue_path, mp3_path, moderators, broadcast_title):
 
 def _save_thumbnail(image_url, show_path):
     dest_path = os.path.join(show_path, 'folder.jpg')
-    if not os.path.exists(dest_path):
+    if not xbmcvfs.exists(dest_path):
         try:
             resp = _http_get(image_url, stream=True)
         except Exception:
@@ -209,18 +210,18 @@ def _download_show(title, moderators, show_slug, broadcast_slug, broadcast_date,
     broadcast_data = _get_broadcast_recording_playlist(show_slug, broadcast_slug, broadcast_date)
     recordings = broadcast_data['recordings']
     list_items = []
-    if not os.path.exists(show_path):
-        os.makedirs(show_path)
+    if not xbmcvfs.exists(show_path):
+        xbmcvfs.mkdirs(show_path)
     thumbnail_path = _save_thumbnail(image_url, show_path)
     for rec_idx, url in enumerate(recordings):
-        mp3_filename = url.replace('/', '_').replace(' ', '_').lower()
+        mp3_filename = xbmcvfs.makeLegalFilename(url)
         label = f'Part {rec_idx+1}'
         show_part_path = os.path.join(show_path, label)
         list_items.append({'url': show_part_path, 'label': label})
-        if not os.path.exists(show_part_path):
-            os.makedirs(show_part_path)
+        if not xbmcvfs.exists(show_part_path):
+            xbmcvfs.mkdirs(show_part_path)
         if thumbnail_path:
-            shutil.copy(thumbnail_path, show_part_path)
+            xbmcvfs.copy(thumbnail_path, show_part_path)
         mp3_path = os.path.join(show_part_path, mp3_filename)
         cue_path = mp3_path + '.cue'
         _save_cuefile(broadcast_data['playlist'][url], cue_path, mp3_path, moderators, title)

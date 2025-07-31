@@ -43,15 +43,6 @@ CHUNK_SIZE = 1024 * 1024 # 1MB
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
-try:
-    AUTH = (
-        ADDON.getSettingString("byte.login.username"),
-        ADDON.getSettingString("byte.login.password")
-    )
-except Exception:
-    xbmc.log("[ByteFM] Credentials not set. Using None.", xbmc.LOGERROR)
-    AUTH = None
-
 
 CUE_TEMPLATE = '''PERFORMER "{moderators}"
 TITLE "{broadcast_title}"
@@ -117,11 +108,20 @@ def plugin_url(**kwargs):
         return sys.argv[0]
 
 
+session = requests.session()
+session.headers['User-Agent'] = xbmc.getUserAgent()
+try:
+    session.auth = (
+        ADDON.getSettingString("byte.login.username"),
+        ADDON.getSettingString("byte.login.password")
+    )
+except Exception:
+    xbmc.log("[ByteFM] Credentials not set. Using None.", xbmc.LOGERROR)
+
 def _http_get(url, **kwargs):
     """Log and perform a HTTP GET"""
     xbmc.log(f"[ByteFM] HTTP GET: {url}", xbmc.LOGINFO)
-    kwargs['auth'] = AUTH
-    resp = requests.get(url, **kwargs)
+    resp = session.get(url, **kwargs)
     try:
         resp.raise_for_status()
     except HTTPError as e:

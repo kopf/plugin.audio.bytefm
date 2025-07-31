@@ -237,8 +237,8 @@ def _download_show(title, moderators, show_slug, broadcast_slug, broadcast_date,
                     f.write(block)
                     i += 1
                     percent_done = int(((CHUNK_SIZE * i) / file_size) * 100)
-                    progress_bar.update(percent_done, _('Downloading...'), extra_info)
-
+                    progress_bar.update(percent_done, extra_info)
+            progress_bar.close()
     return list_items
 
 

@@ -33,8 +33,6 @@ if not xbmcvfs.exists(INFO_CACHE):
 
 BASE_URL = 'https://www.byte.fm'
 
-ARCHIVE_BASE_URL = 'http://archiv.byte.fm'
-
 LETTERS = '0ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 PLUGIN_NAME = 'plugin.audio.bytefm'
@@ -213,8 +211,11 @@ def _download_show(title, moderators, show_slug, broadcast_slug, broadcast_date,
     if not xbmcvfs.exists(show_path):
         xbmcvfs.mkdirs(show_path)
     thumbnail_path = _save_thumbnail(image_url, show_path)
-    for rec_idx, url in enumerate(recordings):
-        mp3_filename = xbmcvfs.makeLegalFilename(url)
+    for rec_idx, rec in enumerate(recordings):
+        if "recording_url" not in rec:
+            continue
+        url = rec["recording_url"]
+        mp3_filename = os.path.basename(url)
         label = f'Part {rec_idx+1}'
         show_part_path = os.path.join(show_path, label)
         list_items.append({'url': show_part_path, 'label': label})
@@ -224,10 +225,10 @@ def _download_show(title, moderators, show_slug, broadcast_slug, broadcast_date,
             xbmcvfs.copy(thumbnail_path, show_part_path)
         mp3_path = os.path.join(show_part_path, mp3_filename)
         cue_path = mp3_path + '.cue'
-        _save_cuefile(broadcast_data['playlist'][url], cue_path, mp3_path, moderators, title)
+        _save_cuefile(rec['playlist'], cue_path, mp3_path, moderators, title)
         if not os.path.isfile(mp3_path):
             xbmc.log(f'[ByteFM] {mp3_path} does not exist, downloading...', xbmc.LOGINFO)
-            resp = _http_get(ARCHIVE_BASE_URL + url, stream=True)
+            resp = _http_get(url, stream=True)
             progress_bar = xbmcgui.DialogProgress()
             progress_bar.create(__localize__(32003))
             i = 0.0

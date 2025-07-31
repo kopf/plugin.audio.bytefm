@@ -26,12 +26,8 @@ msgctxt "#32000"
 msgid "Broadcast from {}"
 msgstr ""
 
-msgctxt "#32001"
-msgid "Downloading..."
-msgstr ""
-
 msgctxt "#32002"
-msgid "File {} of {}"
+msgid "Downloading file {} of {}"
 msgstr ""
 
 msgctxt "#32003"
@@ -43,15 +39,15 @@ msgid "Livestream"
 msgstr ""
 
 msgctxt "#32005"
-msgid "Browse shows by title"
+msgid "Broadcasts"
 msgstr ""
 
 msgctxt "#32006"
-msgid "Browse shows by genre"
+msgid "Genres"
 msgstr ""
 
 msgctxt "#32007"
-msgid "Browse shows by moderator"
+msgid "Moderators"
 msgstr ""
 
 msgctxt "#32008"
@@ -60,4 +56,8 @@ msgstr ""
 
 msgctxt "#32009"
 msgid "Please check your username and password."
+msgstr ""
+
+msgctxt "#32010"
+msgid "Only Music"
 msgstr ""

@@ -257,14 +257,26 @@ def list_root():
     li.setProperty('IsPlayable', 'true')
     xbmcplugin.addDirectoryItem(HANDLE, stream_url, li, False)
 
+    if "nurmusik" in streams:
+        stream_url = streams["nurmusik"]
+        li = xbmcgui.ListItem(label=__localize__(32010))
+        li.setArt(
+            {
+                "icon": os.path.join(THIS_DIR, 'icon.png'),
+                "thumb": os.path.join(THIS_DIR, 'icon.png'),
+            }
+        )
+        li.setProperty('IsPlayable', 'true')
+        xbmcplugin.addDirectoryItem(HANDLE, stream_url, li, False)
+
     li = xbmcgui.ListItem(label=__localize__(32005))
     xbmcplugin.addDirectoryItem(HANDLE, plugin_url(action='letters'), li, True)
 
-    li = xbmcgui.ListItem(label=__localize__(32006))
-    xbmcplugin.addDirectoryItem(HANDLE, plugin_url(action='list_genres'), li, True)
-
     li = xbmcgui.ListItem(label=__localize__(32007))
     xbmcplugin.addDirectoryItem(HANDLE, plugin_url(action='list_moderators'), li, True)
+
+    li = xbmcgui.ListItem(label=__localize__(32006))
+    xbmcplugin.addDirectoryItem(HANDLE, plugin_url(action='list_genres'), li, True)
 
     xbmcplugin.endOfDirectory(HANDLE)
 

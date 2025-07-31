@@ -18,10 +18,8 @@ import xbmcaddon
 import xbmcplugin
 
 
-plugin = Plugin()
-_ = plugin.initialize_gettext()
-
 ADDON = xbmcaddon.Addon()
+__localize__ = ADDON.getLocalizedString
 
 HANDLE = int(sys.argv[1])
 
@@ -128,9 +126,7 @@ def _http_get(url, **kwargs):
         resp.raise_for_status()
     except HTTPError as e:
         if e.response is not None and e.response.status_code == 401:
-            xbmcgui.Dialog().ok(
-                'ByteFM', _("Authentication Failed!"),
-                _("Please check your username and password."), '')
+            xbmcgui.Dialog().ok('ByteFM', __localize__(32008),  __localize__(32009), '')
             ADDON.openSettings()
             sys.exit(-1)
         else:
@@ -178,9 +174,9 @@ def _get_img_url(api_resp):
 
 def _get_subtitle(broadcast):
     if broadcast.get('subtitle'):
-        return '{} ({})'.format(_strip_html(broadcast['subtitle']), broadcast['date'])
+        return f"{_strip_html(broadcast['subtitle'])} ({broadcast['date']})"
     else:
-        return _('Broadcast from {}').format(broadcast['date'])
+        return __localize__(32000).format(broadcast['date'])
 
 def _save_cuefile(playlist, cue_path, mp3_path, moderators, broadcast_title):
     xbmc.log(f"[ByteFM] Creating CUE file at {cue_path}", xbmc.LOGINFO)
@@ -233,10 +229,10 @@ def _download_show(title, moderators, show_slug, broadcast_slug, broadcast_date,
             xbmc.log(f'[ByteFM] {mp3_path} does not exist, downloading...', xbmc.LOGINFO)
             resp = _http_get(ARCHIVE_BASE_URL + url, stream=True)
             progress_bar = xbmcgui.DialogProgress()
-            progress_bar.create(_('Please wait'))
+            progress_bar.create(__localize__(32003))
             i = 0.0
             file_size = int(resp.headers['Content-Length'])
-            extra_info = _('File {} of {}').format(rec_idx + 1, len(recordings))
+            extra_info = __localize__(32002).format(rec_idx + 1, len(recordings))
             with open(mp3_path, 'wb') as f:
                 for block in resp.iter_content(CHUNK_SIZE):
                     f.write(block)
@@ -250,7 +246,7 @@ def _download_show(title, moderators, show_slug, broadcast_slug, broadcast_date,
 def list_root():
     streams = _get_streams()
     stream_url = streams.get('hq', streams['sq'])
-    li = xbmcgui.ListItem(label=_('Livestream'))
+    li = xbmcgui.ListItem(label=__localize__(32004))
     li.setArt(
         {
             "icon": os.path.join(THIS_DIR, 'icon.png'),
@@ -260,13 +256,13 @@ def list_root():
     li.setProperty('IsPlayable', 'true')
     xbmcplugin.addDirectoryItem(HANDLE, stream_url, li, False)
 
-    li = xbmcgui.ListItem(label=_('Browse shows by title'))
+    li = xbmcgui.ListItem(label=__localize__(32005))
     xbmcplugin.addDirectoryItem(HANDLE, plugin_url(action='letters'), li, True)
 
-    li = xbmcgui.ListItem(label=_('Browse shows by genre'))
+    li = xbmcgui.ListItem(label=__localize__(32006))
     xbmcplugin.addDirectoryItem(HANDLE, plugin_url(action='list_genres'), li, True)
 
-    li = xbmcgui.ListItem(label=_('Browse shows by moderator'))
+    li = xbmcgui.ListItem(label=__localize__(32007))
     xbmcplugin.addDirectoryItem(HANDLE, plugin_url(action='list_moderators'), li, True)
 
     xbmcplugin.endOfDirectory(HANDLE)

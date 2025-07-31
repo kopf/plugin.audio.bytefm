@@ -11,7 +11,6 @@ from urllib.parse import urlencode, parse_qsl
 
 import requests
 from requests.exceptions import HTTPError
-from simpleplugin import Plugin
 import xbmc
 import xbmcgui
 import xbmcaddon

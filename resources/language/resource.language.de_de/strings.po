@@ -1,0 +1,63 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: plugin.music.bytefm\n"
+"POT-Creation-Date: 2017-03-11 21:53+0100\n"
+"PO-Revision-Date: 2025-07-28 09:00+0200\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 1.8.12\n"
+"X-Poedit-Basepath: .\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Poedit-SearchPath-0: main.py\n"
+
+msgctxt "#30000"
+msgid "Username"
+msgstr "Benutzername"
+
+msgctxt "#30001"
+msgid "Password"
+msgstr "Passwort"
+
+msgctxt "#32000"
+msgid "Broadcast from {}"
+msgstr "Sendung vom {}"
+
+msgctxt "#32001"
+msgid "Downloading..."
+msgstr "Herunterladen..."
+
+msgctxt "#32002"
+msgid "File {} of {}"
+msgstr "Datei {} von {}"
+
+msgctxt "#32003"
+msgid "Please wait"
+msgstr "Bitte warten"
+
+msgctxt "#32004"
+msgid "Livestream"
+msgstr "Livestream"
+
+msgctxt "#32005"
+msgid "Browse shows by title"
+msgstr "Sendungen nach Titel durchsuchen"
+
+msgctxt "#32006"
+msgid "Browse shows by genre"
+msgstr "Sendungen nach Genre durchsuchen"
+
+msgctxt "#32007"
+msgid "Browse shows by moderator"
+msgstr "Sendungen nach Moderator durchsuchen"
+
+msgctxt "#32008"
+msgid "Authentication Failed!"
+msgstr "Authentifizierung fehlgeschlagen!"
+
+msgctxt "#32009"
+msgid "Please check your username and password."
+msgstr "Bitte überprüfen Sie Ihren Benutzernamen und Ihr Passwort."

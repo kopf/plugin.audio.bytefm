@@ -12,5 +12,8 @@
         <license>GNU General Public License, v2</license>
         <description lang="en">Allows you to listen to the ByteFM archive and livestream</description>
         <platform>all</platform>
+	<assets>
+	  <icon>icon.png</icon>
+	</assets> 
     </extension>
 </addon>

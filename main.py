@@ -354,7 +354,7 @@ def list_broadcasts(params):
         li = xbmcgui.ListItem(label=label)
         img = _get_img_url(broadcast) or params.get('show_img')
         li.setArt({'icon': img, 'thumb': img})
-        li.setInfo('video', {'plot': broadcast['description']})
+        li.setInfo('video', {'plot': _strip_html(broadcast['description'])})
         url = plugin_url(
             action = 'play',
             show_slug = params['slug'],

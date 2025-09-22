@@ -364,7 +364,7 @@ def list_broadcasts(params):
             broadcast_slug = broadcast['slug'],
             image = img
         )
-        xbmcplugin.addDirectoryItem(HANDLE, url, li, False)
+        xbmcplugin.addDirectoryItem(HANDLE, url, li, True)
     xbmcplugin.endOfDirectory(HANDLE)
 
 
@@ -379,7 +379,8 @@ def play(params):
         show_path)
     for item in list_items:
         li = xbmcgui.ListItem(label=item['label'])
-        xbmcplugin.addDirectoryItem(HANDLE, item['url'], li, False)
+        li.setProperty('IsPlayable', 'true')
+        xbmcplugin.addDirectoryItem(HANDLE, item['url'], li, True)
     xbmcplugin.endOfDirectory(HANDLE)
 
 

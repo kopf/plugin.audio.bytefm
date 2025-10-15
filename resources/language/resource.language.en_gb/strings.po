@@ -39,7 +39,7 @@ msgid "Livestream"
 msgstr ""
 
 msgctxt "#32005"
-msgid "Broadcasts"
+msgid "Shows"
 msgstr ""
 
 msgctxt "#32006"

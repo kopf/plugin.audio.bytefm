@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 0.3.0 (2025-10-15)
+* Complete rewrite, porting to python3 and dropping simpleplugin. Big thanks to [Ole Streicher](https://github.com/olebole/) for doing the heavy lifting on this, and resurrecting the plugin in the process!
+
 ## Version 0.2.1 (2019-01-14)
 * Fixed error caused by missing show thumbnails (https://forum.kodi.tv/showthread.php?tid=319857&pid=2808908#pid2808908)
 

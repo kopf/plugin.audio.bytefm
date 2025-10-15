@@ -369,7 +369,6 @@ def list_broadcasts(params):
 
 
 def play(params):
-    # TODO: TEST CUESHEETS WITH MULTIPLE PARTS
     concat_str = params['show_slug'] + params['broadcast_date'] + params['title']
     show_dir = hashlib.md5(concat_str.encode('utf-8')).hexdigest()
     show_path = os.path.join(SHOWS_CACHE, show_dir)

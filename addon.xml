@@ -1,17 +1,35 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.audio.bytefm" name="ByteFM" version="0.2.1" provider-name="Aengus Walton">
+<addon id="plugin.audio.bytefm" name="ByteFM" version="0.3.0" provider-name="Aengus Walton">
     <requires>
-        <import addon="xbmc.python" version="2.20.0" />
+        <import addon="xbmc.python" version="3.0.0" />
         <import addon="script.module.requests" version="2.9.1"/>
-        <import addon="script.module.beautifulsoup" version="3.2.1"/>
     </requires>
     <extension point="xbmc.python.pluginsource" library="main.py">
         <provides>audio</provides>
     </extension>
     <extension point="xbmc.addon.metadata">
-        <summary lang="en">Allows you to listen to the ByteFM archive and livestream</summary>
         <license>GNU General Public License, v2</license>
-        <description lang="en">Allows you to listen to the ByteFM archive and livestream</description>
+        <summary lang="en">ByteFM Radio for good music</summary>
+        <description lang="en">
+	  ByteFM is an online music radio station. It offers a
+	  moderated program with journalistic standards and a
+	  hand-picked selection of music. With the ByteFM app, you can
+	  listen to the ByteFM live stream anywhere. The app also
+	  provides access to the ByteFM archive and information about
+	  the program and presenters.
+	</description>
+        <summary lang="de">ByteFM Radio für gute Musik</summary>
+        <description lang="de">
+	  ByteFM ist Musikradio im Internet. Ein moderiertes Programm
+	  mit journalistischem Anspruch und handverlesener
+	  Musikauswahl.  Mit der ByteFM Applikation lässt sich der
+	  ByteFM Live-Stream bequem überall hören. Außerdem bietet die
+	  Applikation Zugriff auf das ByteFM Archiv sowie
+	  Informationen zu Programm, Moderatorinnen und Moderatoren.
+	</description>
         <platform>all</platform>
+	<assets>
+	  <icon>icon.png</icon>
+	</assets> 
     </extension>
 </addon>
